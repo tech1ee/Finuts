@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload Detekt Reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: detekt-reports
           path: '**/build/reports/detekt/'
@@ -86,7 +86,7 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-reports
           path: |
@@ -123,7 +123,7 @@ jobs:
         run: ./gradlew :androidApp:assembleDebug
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: debug-apk
           path: androidApp/build/outputs/apk/debug/*.apk
