@@ -149,7 +149,7 @@ jobs:
 
       - name: Download Debug APK
         if: steps.check-secrets.outputs.configured == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: debug-apk
           path: ./apk
