@@ -40,17 +40,17 @@ jobs:
       - name: Run Detekt
         run: ./gradlew detekt --continue
 
-      - name: Run Android Lint
-        run: ./gradlew :androidApp:lint --continue
+      # Android Lint disabled due to Kotlin 2.3.0 compatibility issue
+      # https://issuetracker.google.com/issues/356028371
+      # - name: Run Android Lint
+      #   run: ./gradlew :androidApp:lint --continue
 
-      - name: Upload Lint Reports
+      - name: Upload Detekt Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lint-reports
-          path: |
-            **/build/reports/detekt/
-            **/build/reports/lint-results*.html
+          name: detekt-reports
+          path: '**/build/reports/detekt/'
 
   test:
     name: Test
