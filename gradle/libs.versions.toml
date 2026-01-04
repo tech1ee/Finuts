@@ -1,0 +1,190 @@
+[versions]
+# Kotlin & Compose
+kotlin = "2.3.0"
+compose-multiplatform = "1.9.3"
+agp = "8.7.3"
+
+# AndroidX / Jetpack KMP
+room = "2.7.1"
+datastore = "1.2.0"
+lifecycle = "2.9.6"
+navigation = "2.9.1"
+
+# Kotlin Libraries
+coroutines = "1.10.2"
+serialization = "1.9.0"
+datetime = "0.7.1"
+
+# Networking
+ktor = "3.3.3"
+
+# DI
+koin = "4.1.0"
+
+# Images
+coil = "3.3.0"
+
+# Logging
+kermit = "2.0.4"
+
+# AI SDKs
+openai-kotlin = "4.0.1"
+anthropic-kotlin = "0.25.2"
+
+# Testing
+junit = "4.13.2"
+kotlin-test = "2.3.0"
+turbine = "1.2.0"
+mockk = "1.13.13"
+kotest = "5.9.1"
+kover = "0.9.0-RC"
+
+# Code Quality
+detekt = "1.23.7"
+
+# Android
+activity-compose = "1.10.1"
+android-minSdk = "26"
+android-targetSdk = "35"
+android-compileSdk = "35"
+
+# Encryption
+sqlcipher = "4.6.1"
+sqlite = "2.5.0"
+
+# Analytics & Crash Reporting
+amplitude = "1.16.8"
+sentry = "7.19.1"
+
+[libraries]
+# Compose Multiplatform
+compose-ui = { module = "org.jetbrains.compose.ui:ui" }
+compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources" }
+
+# Room KMP
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+
+# Lifecycle & ViewModel KMP
+lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+
+# Navigation KMP
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation" }
+
+# DataStore KMP
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+datastore-core-okio = { module = "androidx.datastore:datastore-core-okio", version.ref = "datastore" }
+
+# Ktor Client
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+
+# Koin DI
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+
+# Coil Image Loading
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+# Coroutines
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+
+# Serialization
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+# DateTime
+datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+
+# Logging
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+kermit-crashlytics = { module = "co.touchlab:kermit-crashlytics", version.ref = "kermit" }
+
+# AI SDKs
+openai-client = { module = "com.aallam.openai:openai-client", version.ref = "openai-kotlin" }
+anthropic-client = { module = "com.xemantic.ai:anthropic-sdk-kotlin", version.ref = "anthropic-kotlin" }
+
+# SQLCipher Encryption
+sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
+
+# Analytics & Crash Reporting
+amplitude-analytics = { module = "com.amplitude:analytics-kotlin", version.ref = "amplitude" }
+sentry-kotlin = { module = "io.sentry:sentry-kotlin-multiplatform", version.ref = "sentry" }
+
+# Android Activity
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+
+# Testing
+junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin-test" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+
+[bundles]
+compose = [
+    "compose-ui",
+    "compose-foundation",
+    "compose-material3",
+    "compose-runtime",
+    "compose-components-resources"
+]
+
+ktor-common = [
+    "ktor-client-core",
+    "ktor-client-content-negotiation",
+    "ktor-serialization-json",
+    "ktor-client-logging"
+]
+
+lifecycle = [
+    "lifecycle-viewmodel",
+    "lifecycle-viewmodel-compose",
+    "lifecycle-runtime-compose"
+]
+
+koin-common = [
+    "koin-core",
+    "koin-compose",
+    "koin-compose-viewmodel"
+]
+
+coil = [
+    "coil-compose",
+    "coil-network-ktor"
+]
+
+testing = [
+    "kotlin-test",
+    "coroutines-test",
+    "turbine",
+    "kotest-assertions-core"
+]
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+room = { id = "androidx.room", version.ref = "room" }
+ksp = { id = "com.google.devtools.ksp", version = "2.3.4" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

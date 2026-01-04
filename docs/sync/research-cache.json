@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-12-29T18:00:00Z",
+  "research": [
+    {
+      "topic": "Finance app design best practices",
+      "date": "2025-12-29",
+      "keywords": ["design", "ui", "ux", "finance", "mobile", "dark-mode", "typography", "colors", "navigation", "gamification"],
+      "report_path": "docs/research/2025-12-29-finance-app-design.md",
+      "sources_count": 25,
+      "expires": "2026-01-29"
+    },
+    {
+      "topic": "KMP tech stack for mobile finance app",
+      "date": "2025-12-29",
+      "keywords": ["kotlin", "kmp", "compose-multiplatform", "room", "koin", "ktor", "ios", "android", "tech-stack"],
+      "report_path": "docs/research/2025-12-29-kmp-tech-stack.md",
+      "sources_count": 25,
+      "expires": "2026-01-29"
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+# Finuts Roadmap
+
+**Last Updated:** 2026-01-03
+**Total Tests:** 555 (280 shared + 275 composeApp)
+**Plan File:** [compiled-imagining-sparrow.md](~/.claude/plans/compiled-imagining-sparrow.md)
+
+---
+
+## Development Phases
+
+### Phase 1: MVP (Weeks 1-8)
+**Status**: ✅ Complete (95%)
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| M0: Project Setup | Week 1-2 | ✅ Complete |
+| M1: Core Data & Navigation | Week 3-4 | ✅ Complete |
+| M2: Transactions UI | Week 5-6 | ✅ Complete |
+| M3: Budget & Reports | Week 7-8 | ✅ Complete |
+
+**Features**:
+- [x] KMP Project initialized
+- [x] Design system created (Tabler Icons, theme tokens)
+- [x] Account management (CRUD, archive, multi-currency)
+- [x] Transaction CRUD (list, detail, add/edit, delete)
+- [x] Categories (13 defaults + custom)
+- [x] Budgets (full CRUD with progress tracking)
+- [x] Quick add transaction (<30s target met)
+- [x] Settings with DataStore preferences
+- [x] Basic reports/charts (KoalaPlot donut chart)
+- [x] Transfers (double-entry accounting)
+
+### Phase 2: AI Features (Weeks 9-14)
+**Status**: ⏳ Pending
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| M4: Android Release | Week 9-10 | ⏳ Pending |
+| M5: AI Features | Week 11-12 | ⏳ Pending |
+| M6: iOS Release | Week 13-14 | ⏳ Pending |
+
+**Features**:
+- [ ] AI categorization (GPT-4o-mini/Claude Haiku)
+- [ ] AI insights
+- [ ] Bank PDF import (Kaspi, Halyk)
+- [ ] Google Play launch
+- [ ] App Store launch
+
+### Phase 3: Advanced (Weeks 15-20)
+**Status**: ⏳ Pending
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| M7: Advanced Features | Week 15-18 | ⏳ Pending |
+| M8: v1.0 Release | Week 19-20 | ⏳ Pending |
+
+**Features**:
+- [ ] Financial goals
+- [ ] Receipt OCR
+- [ ] Export (CSV, PDF)
+- [ ] Push notifications
+- [ ] Performance optimization
+
+---
+
+## Current Focus
+
+**Milestone**: M4 - Android Release
+**Current Iteration**: 11 - AI Categorization (Planned)
+
+### Completed Iterations
+| # | Name | Date | Tests Added |
+|---|------|------|-------------|
+| 1-5 | Budget Domain/Data/Presentation | 2026-01-01 | +139 |
+| 6 | Code Cleanup (refactoring) | 2026-01-02 | - |
+| 7 | Budget UI Layer | 2026-01-02 | +26 |
+| 8 | Transaction Detail/Edit | 2026-01-02 | +30 |
+| 9 | Basic Reports/Charts | 2026-01-03 | +44 |
+| 10 | Transfers (double-entry) | 2026-01-03 | +48 |
+
+### Next Iterations
+- **Iteration 11**: AI Categorization (3-tier: rules + GPT-4o-mini + GPT-4o)
+- **Iteration 12**: Android Release Prep (testing, polish, Play Store)
+- **Iteration 13**: iOS Release Prep (testing, polish, App Store)
+
+### Technology Decisions
+| Feature | Technology | ADR |
+|---------|------------|-----|
+| Charts | KoalaPlot 0.10.4 | [ADR-005](decisions/005-koalaplot-charts.md) |
+| AI Tier 2 | GPT-4o-mini / Claude Haiku | Research |
+| AI Tier 3 | GPT-4o / Claude Sonnet | Research |
+
+---
+
+## PRD Feature Mapping
+
+### Phase 1: MVP Features
+
+| PRD Feature | Status | Implementation |
+|-------------|--------|----------------|
+| Account management | ✅ Complete | AccountsScreen, AccountDetail, AddEditAccount |
+| Transaction CRUD | ✅ Complete | TransactionsScreen, TransactionDetail, AddEditTransaction |
+| Categories | ✅ Complete | 13 default categories + CategoryRepository |
+| Budgets | ✅ Complete | BudgetsScreen, BudgetDetail, AddEditBudget |
+| Basic reports | ✅ Complete | ReportsScreen, CategoryDonutChart (KoalaPlot) |
+| Transfers | ✅ Complete | AddTransferScreen, double-entry accounting |
+| Quick add (<30s) | ✅ Complete | QuickAddSheet modal |
+| Multi-currency | ✅ Complete | KZT, USD, EUR, RUB support |
+| Offline-first | ✅ Complete | Room database, local storage |
+
+### Phase 2: AI Features (Pending)
+
+| PRD Feature | Status | Notes |
+|-------------|--------|-------|
+| AI categorization | ⏳ Pending | GPT-4o-mini integration planned |
+| AI insights | ⏳ Pending | Financial recommendations |
+| Bank PDF import | ⏳ Pending | Kaspi, Halyk parsers |
+
+### Phase 3: Advanced (Pending)
+
+| PRD Feature | Status | Notes |
+|-------------|--------|-------|
+| Financial goals | ⏳ Pending | Savings goals tracking |
+| Receipt OCR | ⏳ Pending | ML Kit / Vision Framework |
+| Export (CSV, PDF) | ⏳ Pending | Report export |
+
+---
+
+## Architecture Compliance
+
+| Rule | Status |
+|------|--------|
+| File < 200 lines | ✅ All compliant |
+| TDD approach | ✅ Followed |
+| No fakes in prod | ✅ Verified |
+| SOLID principles | ✅ Applied |
+| Clean Architecture | ✅ Layers separated |
+| Test coverage >65% | ✅ Estimated 70%+ |
+
+---
+
+## Test Coverage
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| shared/ | 280 | ✅ |
+| composeApp/ | 275 | ✅ |
+| **Total** | **555** | ✅ |
+
+### By Feature
+| Feature | Tests |
+|---------|-------|
+| Accounts | 47 |
+| Transactions | 69 |
+| Budgets | 68 |
+| Reports | 44 |
+| Transfers | 48 |
+| Dashboard | 16 |
+| Settings | 13 |
+| UI Components | 26 |
+
+---
+
+## Success Metrics (Year 1)
+
+| Metric | Target |
+|--------|--------|
+| MAU | 50,000 |
+| Retention D30 | >40% |
+| Premium Conversion | 5-8% |
+| MRR | $5,000-7,500 |
+| Rating | >4.5★ |

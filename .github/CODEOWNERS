@@ -1,0 +1,27 @@
+# Code Owners for Finuts
+# These owners will be requested for review on PRs
+
+# Global owners (fallback)
+* @tech1ee
+
+# Core modules
+/shared/ @tech1ee
+/composeApp/ @tech1ee
+/androidApp/ @tech1ee
+/iosApp/ @tech1ee
+
+# Build configuration
+*.gradle.kts @tech1ee
+gradle/ @tech1ee
+*.properties @tech1ee
+
+# CI/CD
+/.github/ @tech1ee
+
+# Documentation
+/docs/ @tech1ee
+*.md @tech1ee
+
+# Security-sensitive files
+/config/ @tech1ee
+SECURITY.md @tech1ee

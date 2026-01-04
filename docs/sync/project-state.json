@@ -1,0 +1,19 @@
+{
+  "project": "AI/Finuts",
+  "last_sync": "2026-01-02T19:00:00Z",
+  "sync_type": "full",
+  "notion_project_id": "2d8809e0-e180-81cb-bd07-d10958364e5c",
+  "tasks_synced": 0,
+  "pending_changes": [],
+  "docs_status": {
+    "changelog": "2026-01-02",
+    "roadmap": "needs_update",
+    "decision_log": "synced",
+    "session_log": "2026-01-02"
+  },
+  "iterations": {
+    "iteration_6_cleanup": "completed",
+    "iteration_2_budget_presentation": "completed",
+    "iteration_3_budget_ui": "in_progress"
+  }
+}
