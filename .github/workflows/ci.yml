@@ -178,6 +178,7 @@ jobs:
 
       - name: Upload to Firebase App Distribution
         if: steps.check-secrets.outputs.configured == 'true'
+        continue-on-error: true  # Don't fail build if Firebase upload fails
         uses: wzieba/Firebase-Distribution-Github-Action@v1.7.0
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
