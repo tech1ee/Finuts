@@ -29,6 +29,7 @@ fun TransactionItem(
         time = formatTime(transaction.date),
         amount = formatAmount(transaction),
         transactionType = listTransactionType,
+        isAISuggested = transaction.isAICategorized,
         onClick = onClick,
         showDivider = showDivider
     )

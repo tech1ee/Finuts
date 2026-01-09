@@ -36,7 +36,7 @@ class AddEditAccountViewModel(
     }
 
     private fun loadExistingAccount() {
-        viewModelScope.launch {
+        safeScope.launch {
             val account = accountRepository.getAccountById(accountId!!).first()
             if (account != null) {
                 _formState.update {

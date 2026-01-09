@@ -14,6 +14,7 @@ import com.finuts.app.ui.components.feedback.EmptyStateType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -36,68 +37,82 @@ class DashboardViewModel(
         transactionRepository.getAllTransactions(),
         categoryRepository.getAllCategories()
     ) { accounts, transactions, categories ->
-        val now = Instant.fromEpochMilliseconds(
-            kotlin.time.Clock.System.now().toEpochMilliseconds()
-        )
-        val tz = TimeZone.currentSystemDefault()
-        val localNow = now.toLocalDateTime(tz)
+        try {
+            val now = Instant.fromEpochMilliseconds(
+                kotlin.time.Clock.System.now().toEpochMilliseconds()
+            )
+            val tz = TimeZone.currentSystemDefault()
+            val localNow = now.toLocalDateTime(tz)
 
-        // Calculate month period
-        val monthStart = getMonthStart(localNow.year, localNow.monthNumber)
-        val monthEnd = getMonthEnd(localNow.year, localNow.monthNumber)
+            // Calculate month period
+            val monthStart = getMonthStart(localNow.year, localNow.monthNumber)
+            val monthEnd = getMonthEnd(localNow.year, localNow.monthNumber)
 
-        // Filter transactions for current month
-        val monthTransactions = transactions.filter { tx ->
-            tx.date >= monthStart && tx.date <= monthEnd
+            // Filter transactions for current month
+            val monthTransactions = transactions.filter { tx ->
+                tx.date >= monthStart && tx.date <= monthEnd
+            }
+
+            // Calculate spending and income
+            val monthExpenses = monthTransactions
+                .filter { it.type == TransactionType.EXPENSE }
+                .sumOf { kotlin.math.abs(it.amount) }
+            val monthIncome = monthTransactions
+                .filter { it.type == TransactionType.INCOME }
+                .sumOf { kotlin.math.abs(it.amount) }
+
+            // Calculate spending by category (top 3)
+            val categorySpending = calculateCategorySpending(
+                transactions = monthTransactions.filter { it.type == TransactionType.EXPENSE },
+                categories = categories,
+                totalSpending = monthExpenses
+            )
+
+            // Calculate financial health
+            val healthStatus = calculateHealthStatus(monthExpenses, monthIncome)
+
+            DashboardUiState.Success(
+                totalBalance = accounts.sumOf { it.balance },
+                accounts = accounts,
+                monthlySpending = monthExpenses,
+                monthlyIncome = monthIncome,
+                monthlyBudget = null, // TODO: Fetch from BudgetRepository when implemented
+                categorySpending = categorySpending,
+                healthStatus = healthStatus,
+                periodLabel = formatPeriodLabel(localNow.monthNumber, localNow.year)
+            )
+        } catch (e: Exception) {
+            DashboardUiState.Error(e.message ?: "Unknown error")
         }
-
-        // Calculate spending and income
-        val monthExpenses = monthTransactions
-            .filter { it.type == TransactionType.EXPENSE }
-            .sumOf { kotlin.math.abs(it.amount) }
-        val monthIncome = monthTransactions
-            .filter { it.type == TransactionType.INCOME }
-            .sumOf { kotlin.math.abs(it.amount) }
-
-        // Calculate spending by category (top 3)
-        val categorySpending = calculateCategorySpending(
-            transactions = monthTransactions.filter { it.type == TransactionType.EXPENSE },
-            categories = categories,
-            totalSpending = monthExpenses
-        )
-
-        // Calculate financial health
-        val healthStatus = calculateHealthStatus(monthExpenses, monthIncome)
-
-        DashboardUiState.Success(
-            totalBalance = accounts.sumOf { it.balance },
-            accounts = accounts,
-            monthlySpending = monthExpenses,
-            monthlyIncome = monthIncome,
-            monthlyBudget = DEFAULT_MONTHLY_BUDGET,
-            categorySpending = categorySpending,
-            healthStatus = healthStatus,
-            periodLabel = formatPeriodLabel(localNow.monthNumber, localNow.year)
-        )
+    }.catch { e ->
+        emit(DashboardUiState.Error(e.message ?: "Unknown error"))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = DashboardUiState.Loading
     )
 
-    val emptyStateType: StateFlow<EmptyStateType?> = combine(
+    val emptyStateType: StateFlow<EmptyStateType?> = accountRepository.getActiveAccounts()
+        .map { accounts ->
+            if (accounts.isEmpty()) EmptyStateType.DashboardNoAccounts else null
+        }
+        .catch { emit(null) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
+
+    val showFirstTransactionPrompt: StateFlow<Boolean> = combine(
         accountRepository.getActiveAccounts(),
         transactionRepository.getAllTransactions()
     ) { accounts, transactions ->
-        when {
-            accounts.isEmpty() -> EmptyStateType.DashboardNoAccounts
-            transactions.isEmpty() -> EmptyStateType.DashboardNoTransactions
-            else -> null
-        }
-    }.stateIn(
+        accounts.isNotEmpty() && transactions.isEmpty()
+    }.catch { emit(false) }
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = null
+        initialValue = false
     )
 
     private fun calculateCategorySpending(
@@ -178,7 +193,7 @@ class DashboardViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        safeScope.launch {
             _isRefreshing.value = true
             kotlinx.coroutines.delay(300)
             _isRefreshing.value = false
@@ -187,7 +202,6 @@ class DashboardViewModel(
 
     companion object {
         private const val TOP_CATEGORIES_LIMIT = 3
-        private const val DEFAULT_MONTHLY_BUDGET = 20000000L // ₸200,000.00 in tiyn
     }
 }
 
@@ -210,7 +224,7 @@ sealed interface DashboardUiState {
         val accounts: List<Account>,
         val monthlySpending: Long,
         val monthlyIncome: Long,
-        val monthlyBudget: Long,
+        val monthlyBudget: Long?,
         val categorySpending: List<DashboardCategorySpending>,
         val healthStatus: HealthStatus,
         val periodLabel: String

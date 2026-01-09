@@ -8,6 +8,7 @@ import com.finuts.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,16 +24,23 @@ class AccountsViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    val uiState: StateFlow<AccountsUiState> = accountRepository.getAllAccounts()
-        .map { accounts ->
-            val active = accounts.filter { !it.isArchived }
-            val archived = accounts.filter { it.isArchived }
-            AccountsUiState.Success(
-                activeAccounts = active,
-                archivedAccounts = archived,
-                totalBalance = active.sumOf { it.balance }
-            )
-        }
+    // Track pending archive for undo functionality
+    private var pendingArchiveId: String? = null
+    private val _pendingArchiveIds = MutableStateFlow<Set<String>>(emptySet())
+
+    val uiState: StateFlow<AccountsUiState> = kotlinx.coroutines.flow.combine(
+        accountRepository.getAllAccounts(),
+        _pendingArchiveIds
+    ) { accounts, pendingIds ->
+        val active = accounts.filter { !it.isArchived && it.id !in pendingIds }
+        val archived = accounts.filter { it.isArchived }
+        AccountsUiState.Success(
+            activeAccounts = active,
+            archivedAccounts = archived,
+            totalBalance = active.sumOf { it.balance }
+        ) as AccountsUiState
+    }
+        .catch { e -> emit(AccountsUiState.Error(e.message ?: "Unknown error")) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -44,7 +52,7 @@ class AccountsViewModel(
     }
 
     fun onAddAccountClick() {
-        navigateTo(Route.AddAccount())
+        navigateTo(Route.AddAccount)
     }
 
     fun onEditAccountClick(accountId: String) {
@@ -57,6 +65,40 @@ class AccountsViewModel(
         }
     }
 
+    /**
+     * Soft archive - temporarily hides account from UI for undo.
+     * Does not actually persist to database until commitArchive is called.
+     */
+    fun softArchiveAccount(accountId: String) {
+        pendingArchiveId = accountId
+        _pendingArchiveIds.value = _pendingArchiveIds.value + accountId
+    }
+
+    /**
+     * Restore account after soft archive (user pressed Undo).
+     */
+    fun restoreAccount(accountId: String) {
+        if (pendingArchiveId == accountId) {
+            pendingArchiveId = null
+        }
+        _pendingArchiveIds.value = _pendingArchiveIds.value - accountId
+    }
+
+    /**
+     * Commit the archive to database (snackbar timeout or dismissed).
+     */
+    fun commitArchive(accountId: String) {
+        if (accountId in _pendingArchiveIds.value) {
+            launchSafe {
+                accountRepository.archiveAccount(accountId)
+                _pendingArchiveIds.value = _pendingArchiveIds.value - accountId
+                if (pendingArchiveId == accountId) {
+                    pendingArchiveId = null
+                }
+            }
+        }
+    }
+
     fun onDeleteAccount(accountId: String) {
         launchSafe {
             accountRepository.deleteAccount(accountId)
@@ -64,7 +106,7 @@ class AccountsViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        safeScope.launch {
             _isRefreshing.value = true
             kotlinx.coroutines.delay(300)
             _isRefreshing.value = false

@@ -56,6 +56,12 @@ sqlite = "2.5.0"
 amplitude = "1.16.8"
 sentry = "7.19.1"
 
+# File Picker
+filekit = "0.8.8"
+
+# OCR (Android only)
+tesseract = "4.9.0"
+
 [libraries]
 # Compose Multiplatform
 compose-ui = { module = "org.jetbrains.compose.ui:ui" }
@@ -129,6 +135,14 @@ sentry-kotlin = { module = "io.sentry:sentry-kotlin-multiplatform", version.ref 
 
 # Android Activity
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+
+# File Picker
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+filekit-compose = { module = "io.github.vinceglb:filekit-compose", version.ref = "filekit" }
+
+# OCR (Android) - via JitPack (adaptech-cz/Tesseract4Android)
+# OpenMP variant for multi-threaded performance
+tesseract-android = { module = "cz.adaptech.tesseract4android:tesseract4android-openmp", version.ref = "tesseract" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

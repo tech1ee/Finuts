@@ -10,8 +10,8 @@ import com.finuts.app.feature.dashboard.states.DashboardEmptyState
 import com.finuts.app.feature.dashboard.states.DashboardErrorState
 import com.finuts.app.feature.dashboard.states.DashboardLoadingState
 import com.finuts.app.navigation.Route
-import com.finuts.app.ui.components.feedback.EmptyStateType
 import com.finuts.app.presentation.base.NavigationEvent
+import com.finuts.app.ui.components.state.AnimatedStateContent
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -31,11 +31,13 @@ fun DashboardScreen(
     onAddAccountClick: () -> Unit,
     onSeeAllAccountsClick: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onCreateBudgetClick: () -> Unit,
     viewModel: DashboardViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val emptyStateType by viewModel.emptyStateType.collectAsState()
+    val showFirstTransactionPrompt by viewModel.showFirstTransactionPrompt.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
@@ -54,41 +56,48 @@ fun DashboardScreen(
         }
     }
 
-    when (val state = uiState) {
-        is DashboardUiState.Loading -> {
-            DashboardLoadingState()
-        }
-        is DashboardUiState.Success -> {
-            emptyStateType?.let { type ->
-                DashboardEmptyState(
-                    emptyStateType = type,
-                    onAddAccount = onAddAccountClick,
-                    onAddTransaction = { viewModel.onAddTransactionClick() }
-                )
-            } ?: PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh() }
-                ) {
-                    DashboardContent(
-                        totalBalance = state.totalBalance,
-                        accounts = state.accounts,
-                        monthlySpending = state.monthlySpending,
-                        monthlyIncome = state.monthlyIncome,
-                        monthlyBudget = state.monthlyBudget,
-                        categorySpending = state.categorySpending,
-                        healthStatus = state.healthStatus,
-                        periodLabel = state.periodLabel,
-                        onAccountClick = { viewModel.onAccountClick(it) },
-                        onSeeAllAccounts = { viewModel.onSeeAllAccountsClick() },
-                        onAddTransaction = { viewModel.onAddTransactionClick() },
-                        onSend = {},
-                        onReceive = {},
-                        onHistory = { viewModel.onSeeAllTransactionsClick() }
+    AnimatedStateContent(
+        targetState = uiState,
+        contentKey = { it::class }
+    ) { state ->
+        when (state) {
+            is DashboardUiState.Loading -> {
+                DashboardLoadingState()
+            }
+            is DashboardUiState.Success -> {
+                emptyStateType?.let { type ->
+                    DashboardEmptyState(
+                        emptyStateType = type,
+                        onAddAccount = onAddAccountClick,
+                        onAddTransaction = { viewModel.onAddTransactionClick() }
                     )
-                }
-        }
-        is DashboardUiState.Error -> {
-            DashboardErrorState(message = state.message)
+                } ?: PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refresh() }
+                    ) {
+                        DashboardContent(
+                            totalBalance = state.totalBalance,
+                            accounts = state.accounts,
+                            monthlySpending = state.monthlySpending,
+                            monthlyIncome = state.monthlyIncome,
+                            monthlyBudget = state.monthlyBudget,
+                            categorySpending = state.categorySpending,
+                            healthStatus = state.healthStatus,
+                            periodLabel = state.periodLabel,
+                            showFirstTransactionPrompt = showFirstTransactionPrompt,
+                            onAccountClick = { viewModel.onAccountClick(it) },
+                            onSeeAllAccounts = { viewModel.onSeeAllAccountsClick() },
+                            onAddTransaction = { viewModel.onAddTransactionClick() },
+                            onCreateBudget = onCreateBudgetClick,
+                            onSend = {},
+                            onReceive = {},
+                            onHistory = { viewModel.onSeeAllTransactionsClick() }
+                        )
+                    }
+            }
+            is DashboardUiState.Error -> {
+                DashboardErrorState(message = state.message)
+            }
         }
     }
 }

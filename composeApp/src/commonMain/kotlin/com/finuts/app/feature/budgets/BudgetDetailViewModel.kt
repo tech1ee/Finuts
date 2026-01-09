@@ -10,6 +10,7 @@ import com.finuts.domain.repository.BudgetRepository
 import com.finuts.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
@@ -44,6 +45,8 @@ class BudgetDetailViewModel(
                 spent = spent
             )
         }
+    }.catch { e ->
+        emit(BudgetDetailUiState.Error(e.message ?: "Unknown error"))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

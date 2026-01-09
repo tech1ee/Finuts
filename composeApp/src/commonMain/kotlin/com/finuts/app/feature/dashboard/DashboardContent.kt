@@ -15,6 +15,7 @@ import com.finuts.app.feature.dashboard.utils.hexToColor
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.ui.components.cards.CategorySpending
 import com.finuts.app.ui.components.cards.CategorySpendingList
+import com.finuts.app.ui.components.cards.FirstTransactionPromptCard
 import com.finuts.app.ui.components.cards.MonthlyOverviewCard
 import com.finuts.app.ui.components.cards.calculateFinancialHealth
 import com.finuts.app.ui.components.feedback.EmptyStateCompact
@@ -40,13 +41,15 @@ fun DashboardContent(
     accounts: List<Account>,
     monthlySpending: Long,
     monthlyIncome: Long,
-    monthlyBudget: Long,
+    monthlyBudget: Long?,
     categorySpending: List<DashboardCategorySpending>,
     healthStatus: HealthStatus,
     periodLabel: String,
+    showFirstTransactionPrompt: Boolean,
     onAccountClick: (String) -> Unit,
     onSeeAllAccounts: () -> Unit,
     onAddTransaction: () -> Unit,
+    onCreateBudget: () -> Unit,
     onSend: () -> Unit,
     onReceive: () -> Unit,
     onHistory: () -> Unit,
@@ -85,6 +88,18 @@ fun DashboardContent(
                 onHistory = onHistory,
                 modifier = Modifier.padding(horizontal = FinutsSpacing.md)
             )
+        }
+
+        // First Transaction Prompt (inline, doesn't replace content)
+        if (showFirstTransactionPrompt) {
+            item { Spacer(modifier = Modifier.height(FinutsSpacing.md)) }
+
+            item {
+                FirstTransactionPromptCard(
+                    onAddTransaction = onAddTransaction,
+                    modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
+                )
+            }
         }
 
         item { Spacer(modifier = Modifier.height(FinutsSpacing.lg)) }
@@ -132,6 +147,7 @@ fun DashboardContent(
                 periodLabel = periodLabel,
                 currencySymbol = currencySymbol,
                 comparisonToLastMonth = 0f,
+                onCreateBudget = onCreateBudget,
                 modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
             )
         }
@@ -152,6 +168,7 @@ fun DashboardContent(
             CategorySpendingList(
                 categories = uiCategories,
                 currencySymbol = currencySymbol,
+                onAddTransaction = onAddTransaction,
                 modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
             )
         }

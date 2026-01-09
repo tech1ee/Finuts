@@ -2,6 +2,7 @@ package com.finuts.app.feature.transactions
 
 import androidx.lifecycle.viewModelScope
 import com.finuts.app.presentation.base.BaseViewModel
+import com.finuts.app.presentation.base.SnackbarMessageType
 import com.finuts.domain.entity.Account
 import com.finuts.domain.entity.Category
 import com.finuts.domain.entity.Transaction
@@ -9,10 +10,12 @@ import com.finuts.domain.entity.TransactionType
 import com.finuts.domain.repository.AccountRepository
 import com.finuts.domain.repository.CategoryRepository
 import com.finuts.domain.repository.TransactionRepository
+import com.finuts.domain.usecase.LearnFromCorrectionUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -22,13 +25,14 @@ import kotlin.math.abs
 
 /**
  * ViewModel for Add/Edit Transaction screen.
- * Handles form state, validation, and save operations.
+ * Handles form state, validation, save operations, and AI learning from corrections.
  */
 class AddEditTransactionViewModel(
     private val transactionId: String?,
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val learnFromCorrectionUseCase: LearnFromCorrectionUseCase? = null
 ) : BaseViewModel() {
 
     private val _formState = MutableStateFlow(TransactionFormState())
@@ -40,9 +44,11 @@ class AddEditTransactionViewModel(
     val isEditMode: Boolean = transactionId != null
 
     val accounts: StateFlow<List<Account>> = accountRepository.getActiveAccounts()
+        .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val categories: StateFlow<List<Category>> = categoryRepository.getAllCategories()
+        .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
@@ -50,7 +56,7 @@ class AddEditTransactionViewModel(
     }
 
     private fun loadExistingTransaction() {
-        viewModelScope.launch {
+        safeScope.launch {
             val transaction = transactionRepository.getTransactionById(transactionId!!).first()
             if (transaction != null) {
                 _formState.update {
@@ -59,6 +65,7 @@ class AddEditTransactionViewModel(
                         amount = formatAmountForDisplay(transaction.amount),
                         accountId = transaction.accountId,
                         categoryId = transaction.categoryId,
+                        originalCategoryId = transaction.categoryId, // Track for learning
                         merchant = transaction.merchant ?: "",
                         description = transaction.description ?: "",
                         note = transaction.note ?: "",
@@ -116,8 +123,9 @@ class AddEditTransactionViewModel(
             val amountCents = ((state.amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
             val signedAmount = if (state.type == TransactionType.EXPENSE) -amountCents else amountCents
 
+            val txId = transactionId ?: generateId()
             val transaction = Transaction(
-                id = transactionId ?: generateId(),
+                id = txId,
                 accountId = state.accountId,
                 amount = signedAmount,
                 type = state.type,
@@ -132,12 +140,63 @@ class AddEditTransactionViewModel(
 
             if (isEditMode) {
                 transactionRepository.updateTransaction(transaction)
+                // Learn from category correction if changed
+                learnFromCategoryCorrection(txId, state)
             } else {
                 transactionRepository.createTransaction(transaction)
             }
 
             _isSaving.value = false
             navigateBack()
+        }
+    }
+
+    /**
+     * Learn from user's category correction.
+     * Called when user changes category in edit mode.
+     * Shows feedback to user about learning progress.
+     */
+    private suspend fun learnFromCategoryCorrection(
+        transactionId: String,
+        state: TransactionFormState
+    ) {
+        // Only learn if: category changed AND we have merchant info
+        val categoryChanged = state.originalCategoryId != state.categoryId
+        val hasMerchant = state.merchant.isNotBlank() || state.description.isNotBlank()
+
+        if (!categoryChanged || !hasMerchant || state.categoryId == null) return
+
+        val merchantName = state.merchant.ifBlank { state.description }
+        val result = learnFromCorrectionUseCase?.execute(
+            transactionId = transactionId,
+            originalCategoryId = state.originalCategoryId,
+            correctedCategoryId = state.categoryId,
+            merchantName = merchantName
+        )
+
+        // Show feedback based on learning result
+        result?.onSuccess { learnResult ->
+            when (learnResult) {
+                is LearnFromCorrectionUseCase.LearnResult.MappingCreated -> {
+                    sendSnackbar(
+                        "✓ Запомнили категорию для $merchantName",
+                        SnackbarMessageType.SUCCESS
+                    )
+                }
+                is LearnFromCorrectionUseCase.LearnResult.MappingUpdated -> {
+                    val confidence = (learnResult.newConfidence * 100).toInt()
+                    sendSnackbar(
+                        "✓ Улучшили точность для $merchantName ($confidence%)",
+                        SnackbarMessageType.SUCCESS
+                    )
+                }
+                is LearnFromCorrectionUseCase.LearnResult.CorrectionSaved -> {
+                    sendSnackbar(
+                        "Ещё 1 исправление для запоминания",
+                        SnackbarMessageType.INFO
+                    )
+                }
+            }
         }
     }
 
@@ -151,6 +210,8 @@ data class TransactionFormState(
     val amount: String = "",
     val accountId: String = "",
     val categoryId: String? = null,
+    /** Original category when editing - used to detect corrections for AI learning */
+    val originalCategoryId: String? = null,
     val merchant: String = "",
     val description: String = "",
     val note: String = "",

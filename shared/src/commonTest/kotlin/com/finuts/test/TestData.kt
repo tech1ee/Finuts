@@ -9,7 +9,13 @@ import com.finuts.domain.entity.Transaction
 import com.finuts.domain.entity.TransactionType
 import com.finuts.domain.entity.Budget
 import com.finuts.domain.entity.BudgetPeriod
+import com.finuts.domain.entity.import.DocumentType
+import com.finuts.domain.entity.import.ImportedTransaction
+import com.finuts.domain.entity.import.ImportResult
+import com.finuts.domain.entity.import.ImportSource
+import com.finuts.domain.entity.CategorizationSource
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 
 /**
  * Test data factory for creating domain entities in tests.
@@ -29,6 +35,7 @@ object TestData {
         type: AccountType = AccountType.BANK_ACCOUNT,
         currency: Currency = KZT,
         balance: Long = 0L,
+        initialBalance: Long = 0L,
         icon: String? = "bank",
         color: String? = "#4CAF50",
         isArchived: Boolean = false,
@@ -40,6 +47,7 @@ object TestData {
         type = type,
         currency = currency,
         balance = balance,
+        initialBalance = initialBalance,
         icon = icon,
         color = color,
         isArchived = isArchived,
@@ -62,7 +70,11 @@ object TestData {
         attachments: List<String> = emptyList(),
         tags: List<String> = emptyList(),
         createdAt: Instant = DEFAULT_INSTANT,
-        updatedAt: Instant = DEFAULT_INSTANT
+        updatedAt: Instant = DEFAULT_INSTANT,
+        linkedTransactionId: String? = null,
+        transferAccountId: String? = null,
+        categorizationSource: CategorizationSource? = null,
+        categorizationConfidence: Float? = null
     ) = Transaction(
         id = id,
         accountId = accountId,
@@ -78,7 +90,11 @@ object TestData {
         attachments = attachments,
         tags = tags,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        linkedTransactionId = linkedTransactionId,
+        transferAccountId = transferAccountId,
+        categorizationSource = categorizationSource,
+        categorizationConfidence = categorizationConfidence
     )
 
     fun category(
@@ -126,4 +142,62 @@ object TestData {
         createdAt = createdAt,
         updatedAt = updatedAt
     )
+
+    // ==================== Import Entities ====================
+
+    /** Default date for import tests - 2024-01-15 */
+    val DEFAULT_LOCAL_DATE: LocalDate = LocalDate(2024, 1, 15)
+
+    fun importedTransaction(
+        date: LocalDate = DEFAULT_LOCAL_DATE,
+        amount: Long = 10000L,
+        description: String = "Test Import Transaction",
+        merchant: String? = null,
+        balance: Long? = null,
+        category: String? = null,
+        confidence: Float = 0.9f,
+        source: ImportSource = ImportSource.RULE_BASED,
+        rawData: Map<String, String> = emptyMap()
+    ) = ImportedTransaction(
+        date = date,
+        amount = amount,
+        description = description,
+        merchant = merchant,
+        balance = balance,
+        category = category,
+        confidence = confidence,
+        source = source,
+        rawData = rawData
+    )
+
+    fun documentTypeCsv(
+        delimiter: Char = ',',
+        encoding: String = "UTF-8"
+    ) = DocumentType.Csv(delimiter, encoding)
+
+    fun documentTypePdf(
+        bankSignature: String? = null
+    ) = DocumentType.Pdf(bankSignature)
+
+    fun documentTypeOfx(
+        version: String = "2.2"
+    ) = DocumentType.Ofx(version)
+
+    fun importResultSuccess(
+        transactions: List<ImportedTransaction> = listOf(importedTransaction()),
+        documentType: DocumentType = documentTypeCsv(),
+        totalConfidence: Float = 0.9f
+    ) = ImportResult.Success(transactions, documentType, totalConfidence)
+
+    fun importResultError(
+        message: String = "Parse error",
+        documentType: DocumentType? = null,
+        partialTransactions: List<ImportedTransaction> = emptyList()
+    ) = ImportResult.Error(message, documentType, partialTransactions)
+
+    fun importResultNeedsInput(
+        transactions: List<ImportedTransaction> = listOf(importedTransaction(confidence = 0.5f)),
+        documentType: DocumentType = documentTypePdf(),
+        issues: List<String> = listOf("Review required")
+    ) = ImportResult.NeedsUserInput(transactions, documentType, issues)
 }

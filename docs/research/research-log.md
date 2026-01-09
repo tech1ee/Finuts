@@ -2,6 +2,9 @@
 
 | Date | Topic | Sources | Key Findings | Report |
 |------|-------|---------|--------------|--------|
+| 2026-01-05 | Multi-Purpose LLM + Model Tiering | 25+ | Native AI priority (ML Kit/Apple Intelligence = FREE), Gemma 270M (125MB) for parsing/categorization, Gemma 1B (500MB) for insights/chat, Apple adapter architecture (~10-20MB per task), user model selection in Settings, graceful degradation | [report](./2026-01-05-multipurpose-llm-model-tiering.md) |
+| 2026-01-05 | Universal Bank Import | 28+ | 3-tier parser architecture (rules→ML→LLM), OFX>CSV>PDF priority, ML Kit (Android) + Vision (iOS) for OCR, bank2ynab pattern (121 banks), TATR for tables, llama.cpp for on-device LLM, no CIS bank parsers exist (opportunity), GDPR privacy-first design | [report](./2026-01-05-universal-bank-import.md) |
+| 2026-01-04 | Category Management | 25+ | 2-level hierarchy standard (Group→Category), 13-25 default categories optimal, AI categorization 68-90% accuracy, system categories (Transfers/Uncategorized) protected, tags for cross-category filtering, soft delete/archive pattern | [report](./2026-01-04-category-management.md) |
 | 2026-01-03 | Charts, Reports, AI | 25+ | KoalaPlot best for pie/donut (v0.10.4), Vico stable for line/bar, 3-tier AI categorization (80% rules, 15% mini, 5% full), double-entry transfers pattern | [report](./2026-01-03-charts-reports-ai.md) |
 | 2026-01-01 | Budget UX Best Practices | 25+ | Progress bars 80/100% thresholds, color-coded status (green/yellow/red), YNAB envelope model, period selection UI | [report](./2026-01-01-budget-ux-best-practices.md) |
 | 2025-12-30 | Mobile App Top Bars | 25+ | Hero dashboards (no bar), simple 64dp/44pt bars, collapsing headers (exitUntilCollapsed), WindowInsets safe area handling, Dynamic Island 54pt top on iPhone 14+ | [report](./2025-12-30-finance-app-top-bars.md) \| [quick-ref](./APPBAR-QUICKREF.md) |

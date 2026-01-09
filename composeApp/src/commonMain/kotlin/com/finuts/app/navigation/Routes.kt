@@ -25,11 +25,19 @@ sealed interface Route {
     @Serializable data class BudgetDetail(val budgetId: String) : Route
 
     // Create/Edit screens
-    @Serializable data class AddAccount(val source: String = "default") : Route
+    @Serializable data object AddAccount : Route
     @Serializable data class EditAccount(val accountId: String) : Route
     @Serializable data object AddTransaction : Route
     @Serializable data class EditTransaction(val transactionId: String) : Route
     @Serializable data object AddBudget : Route
     @Serializable data class EditBudget(val budgetId: String) : Route
     @Serializable data object AddTransfer : Route
+
+    // Category management
+    @Serializable data object CategoryManagement : Route
+    @Serializable data class AddCategory(val type: String = "EXPENSE") : Route
+    @Serializable data class EditCategory(val categoryId: String) : Route
+
+    // Bank import
+    @Serializable data object Import : Route
 }

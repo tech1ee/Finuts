@@ -286,16 +286,57 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `emptyStateType is DashboardNoTransactions when accounts exist but no transactions`() = runTest {
+    fun `emptyStateType is null when accounts exist but no transactions`() = runTest {
+        // Changed behavior: Dashboard should show content even without transactions
+        // Only show empty state when there are NO accounts
         accountRepository.setAccounts(listOf(TestData.account()))
         transactionRepository.setTransactions(emptyList())
 
         viewModel.emptyStateType.test {
-            awaitItem() // Skip initial
+            // Initial null, and with accounts present computed value should also be null
+            val state = awaitItem()
+            assertNull(state)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `showFirstTransactionPrompt is true when accounts exist but no transactions`() = runTest {
+        accountRepository.setAccounts(listOf(TestData.account()))
+        transactionRepository.setTransactions(emptyList())
+
+        viewModel.showFirstTransactionPrompt.test {
+            awaitItem() // Skip initial false
             advanceUntilIdle()
 
-            val state = awaitItem()
-            assertIs<EmptyStateType.DashboardNoTransactions>(state)
+            val show = awaitItem()
+            assertTrue(show)
+        }
+    }
+
+    @Test
+    fun `showFirstTransactionPrompt is false when transactions exist`() = runTest {
+        accountRepository.setAccounts(listOf(TestData.account()))
+        transactionRepository.setTransactions(listOf(TestData.transaction()))
+
+        viewModel.showFirstTransactionPrompt.test {
+            // With transactions, prompt should not be shown
+            val show = awaitItem()
+            assertFalse(show)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `showFirstTransactionPrompt is false when no accounts`() = runTest {
+        accountRepository.setAccounts(emptyList())
+        transactionRepository.setTransactions(emptyList())
+
+        viewModel.showFirstTransactionPrompt.test {
+            // No accounts = full empty state, not transaction prompt
+            val show = awaitItem()
+            assertFalse(show)
+            cancelAndIgnoreRemainingEvents()
         }
     }
 

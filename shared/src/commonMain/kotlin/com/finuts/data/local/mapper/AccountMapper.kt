@@ -16,6 +16,7 @@ fun AccountEntity.toDomain(): Account = Account(
         name = currencyName
     ),
     balance = balance,
+    initialBalance = initialBalance,
     icon = icon,
     color = color,
     isArchived = isArchived,
@@ -31,6 +32,7 @@ fun Account.toEntity(): AccountEntity = AccountEntity(
     currencySymbol = currency.symbol,
     currencyName = currency.name,
     balance = balance,
+    initialBalance = initialBalance,
     icon = icon,
     color = color,
     isArchived = isArchived,

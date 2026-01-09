@@ -69,6 +69,8 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.sqlcipher.android)
+            // OCR: Tesseract4Android (OpenMP variant for performance)
+            implementation(libs.tesseract.android)
         }
 
         // iOS source set hierarchy

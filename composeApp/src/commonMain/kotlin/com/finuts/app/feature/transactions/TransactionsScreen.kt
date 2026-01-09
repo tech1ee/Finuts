@@ -28,6 +28,7 @@ import com.finuts.app.feature.transactions.states.TransactionsNoAccountsState
 import com.finuts.app.feature.transactions.states.TransactionsNoResultsState
 import com.finuts.app.navigation.Route
 import com.finuts.app.presentation.base.NavigationEvent
+import com.finuts.app.ui.components.state.AnimatedStateContent
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
@@ -74,38 +75,43 @@ fun TransactionsScreen(
         }
     }
 
-    when (val state = uiState) {
-        is TransactionsUiState.Loading -> LoadingContent()
-        is TransactionsUiState.Error -> ErrorContent(state.message)
-        is TransactionsUiState.Success -> {
-            if (state.isEmpty && filter == TransactionFilter.ALL) {
-                if (!hasAccounts) {
-                    TransactionsNoAccountsState(
-                        onGoToAccounts = onGoToAccounts,
-                        modifier = Modifier.fillMaxSize()
-                    )
+    AnimatedStateContent(
+        targetState = uiState,
+        contentKey = { it::class }
+    ) { state ->
+        when (state) {
+            is TransactionsUiState.Loading -> LoadingContent()
+            is TransactionsUiState.Error -> ErrorContent(state.message)
+            is TransactionsUiState.Success -> {
+                if (state.isEmpty && filter == TransactionFilter.ALL) {
+                    if (!hasAccounts) {
+                        TransactionsNoAccountsState(
+                            onGoToAccounts = onGoToAccounts,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        TransactionsEmptyState(
+                            onAddTransaction = { viewModel.onAddTransactionClick() },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 } else {
-                    TransactionsEmptyState(
-                        onAddTransaction = { viewModel.onAddTransactionClick() },
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refresh() },
                         modifier = Modifier.fillMaxSize()
-                    )
-                }
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh() },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    TransactionsContent(
-                        groups = state.groupedTransactions,
-                        filter = filter,
-                        monthlyIncome = state.monthlyIncome,
-                        monthlyExpense = state.monthlyExpense,
-                        periodLabel = state.periodLabel,
-                        onFilterChange = viewModel::onFilterChange,
-                        onTransactionClick = { viewModel.onTransactionClick(it) },
-                        onAddTransaction = { viewModel.onAddTransactionClick() }
-                    )
+                    ) {
+                        TransactionsContent(
+                            groups = state.groupedTransactions,
+                            filter = filter,
+                            monthlyIncome = state.monthlyIncome,
+                            monthlyExpense = state.monthlyExpense,
+                            periodLabel = state.periodLabel,
+                            onFilterChange = viewModel::onFilterChange,
+                            onTransactionClick = { viewModel.onTransactionClick(it) },
+                            onAddTransaction = { viewModel.onAddTransactionClick() }
+                        )
+                    }
                 }
             }
         }

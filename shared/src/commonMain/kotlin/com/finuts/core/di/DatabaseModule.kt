@@ -9,4 +9,6 @@ val databaseModule: Module = module {
     single { get<FinutsDatabase>().transactionDao() }
     single { get<FinutsDatabase>().categoryDao() }
     single { get<FinutsDatabase>().budgetDao() }
+    single { get<FinutsDatabase>().categoryCorrectionDao() }
+    single { get<FinutsDatabase>().learnedMerchantDao() }
 }

@@ -54,6 +54,7 @@
     <string name="no_accounts">Нет счетов</string>
     <string name="no_accounts_desc">Добавьте первый счёт, чтобы начать отслеживать финансы.</string>
     <string name="archive">Архивировать</string>
+    <string name="account_archived">Счёт архивирован</string>
 
     <!-- Settings -->
     <string name="settings">Настройки</string>
@@ -62,6 +63,9 @@
     <string name="language">Язык</string>
     <string name="preferences">Предпочтения</string>
     <string name="default_currency">Валюта по умолчанию</string>
+    <string name="data_management">Управление данными</string>
+    <string name="categories">Категории</string>
+    <string name="manage_categories">Управление категориями расходов и доходов</string>
     <string name="security">Безопасность</string>
     <string name="notifications">Уведомления</string>
     <string name="biometric_lock">Биометрия</string>
@@ -91,14 +95,24 @@
     <string name="onboarding_welcome_title">Добро пожаловать в Finuts</string>
     <string name="onboarding_welcome_description">Контролируйте финансы с умным отслеживанием, бюджетами и аналитикой.</string>
     <string name="onboarding_welcome_cta">Начать</string>
-    <string name="onboarding_goal_title">Какая ваша главная цель?</string>
+    <string name="onboarding_currency_title">Выберите валюту</string>
+    <string name="onboarding_language_title">Выберите язык</string>
+    <string name="onboarding_currency_language_cta">Продолжить</string>
+    <string name="onboarding_goal_title">Какие у вас цели?</string>
+    <string name="onboarding_goal_subtitle">Выберите все подходящие</string>
     <string name="onboarding_goal_cta">Продолжить</string>
-    <string name="onboarding_account_title">Добавьте первый счёт</string>
-    <string name="onboarding_account_description">Начните с добавления банковского счёта, кошелька или карты для отслеживания денег.</string>
+    <string name="onboarding_account_title">Создайте первый счёт</string>
+    <string name="onboarding_account_description">Добавьте кошелёк, банковский счёт или карту для учёта денег.</string>
+    <string name="onboarding_account_name">Название счёта</string>
+    <string name="onboarding_account_type">Тип счёта</string>
+    <string name="onboarding_account_balance">Начальный баланс</string>
+    <string name="onboarding_account_balance_hint">0.00</string>
+    <string name="onboarding_account_create">Создать счёт</string>
     <string name="onboarding_account_add">Добавить счёт</string>
-    <string name="onboarding_account_skip">Позже</string>
+    <string name="onboarding_account_skip">Пропустить</string>
     <string name="onboarding_complete_title">Всё готово!</string>
     <string name="onboarding_complete_description">Начинайте отслеживать финансы и достигайте своих целей.</string>
+    <string name="onboarding_complete_account_created">Счёт «%1$s» создан</string>
     <string name="onboarding_complete_cta">Поехали</string>
 
     <!-- Contextual Empty States -->
@@ -106,6 +120,15 @@
     <string name="add_first_account_desc">Создайте первый счёт для начала учёта финансов.</string>
     <string name="account_ready_title">Счёт готов!</string>
     <string name="add_first_transaction_desc">Добавьте первую транзакцию для получения аналитики.</string>
+    <string name="no_budget_yet">Бюджет не задан</string>
+    <string name="no_budget_yet_desc">Создайте бюджет для отслеживания месячных расходов.</string>
+    <string name="create_budget">Создать бюджет</string>
+    <string name="no_spending_data">Нет данных о расходах</string>
+    <string name="no_spending_data_desc">Добавьте транзакции, чтобы увидеть расходы по категориям.</string>
+
+    <!-- First Transaction Prompt -->
+    <string name="start_tracking_title">Начните отслеживать расходы</string>
+    <string name="start_tracking_desc">Добавьте первую транзакцию для получения аналитики</string>
     <string name="no_accounts_for_transactions">Сначала создайте счёт</string>
     <string name="no_accounts_for_transactions_desc">Для добавления транзакций нужен хотя бы один счёт.</string>
 

@@ -67,6 +67,7 @@ fun TransactionDetailScreen(
                 transaction = state.transaction,
                 accountName = state.accountName,
                 currencySymbol = state.currencySymbol,
+                categoryName = state.categoryName,
                 showMenu = showMenu,
                 onShowMenu = { showMenu = true },
                 onDismissMenu = { showMenu = false },
@@ -93,6 +94,7 @@ private fun TransactionDetailContent(
     transaction: Transaction,
     accountName: String,
     currencySymbol: String,
+    categoryName: String?,
     showMenu: Boolean,
     onShowMenu: () -> Unit,
     onDismissMenu: () -> Unit,
@@ -134,7 +136,7 @@ private fun TransactionDetailContent(
             TransactionDetailInfo(
                 transaction = transaction,
                 accountName = accountName,
-                categoryName = transaction.categoryId
+                categoryName = categoryName
             )
         }
 

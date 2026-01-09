@@ -6,11 +6,15 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import com.finuts.data.local.dao.AccountDao
 import com.finuts.data.local.dao.BudgetDao
+import com.finuts.data.local.dao.CategoryCorrectionDao
 import com.finuts.data.local.dao.CategoryDao
+import com.finuts.data.local.dao.LearnedMerchantDao
 import com.finuts.data.local.dao.TransactionDao
 import com.finuts.data.local.entity.AccountEntity
 import com.finuts.data.local.entity.BudgetEntity
+import com.finuts.data.local.entity.CategoryCorrectionEntity
 import com.finuts.data.local.entity.CategoryEntity
+import com.finuts.data.local.entity.LearnedMerchantEntity
 import com.finuts.data.local.entity.TransactionEntity
 
 @Database(
@@ -18,9 +22,11 @@ import com.finuts.data.local.entity.TransactionEntity
         AccountEntity::class,
         TransactionEntity::class,
         CategoryEntity::class,
-        BudgetEntity::class
+        BudgetEntity::class,
+        CategoryCorrectionEntity::class,
+        LearnedMerchantEntity::class
     ],
-    version = 2,
+    version = 5,
     exportSchema = true
 )
 @ConstructedBy(FinutsDatabaseConstructor::class)
@@ -29,6 +35,8 @@ abstract class FinutsDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun categoryDao(): CategoryDao
     abstract fun budgetDao(): BudgetDao
+    abstract fun categoryCorrectionDao(): CategoryCorrectionDao
+    abstract fun learnedMerchantDao(): LearnedMerchantDao
 
     companion object {
         const val DATABASE_NAME = "finuts.db"

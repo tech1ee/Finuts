@@ -10,6 +10,8 @@ data class Account(
     val type: AccountType,
     val currency: Currency,
     val balance: Long,
+    /** Initial balance before any transactions. Used for calculated balance. */
+    val initialBalance: Long = 0L,
     val icon: String?,
     val color: String?,
     val isArchived: Boolean = false,

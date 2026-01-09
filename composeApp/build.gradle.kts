@@ -66,6 +66,10 @@ kotlin {
 
             // Charts (KoalaPlot - Compose Multiplatform charting library)
             implementation("io.github.koalaplot:koalaplot-core:0.10.4")
+
+            // File Picker
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.compose)
         }
 
         commonTest.dependencies {

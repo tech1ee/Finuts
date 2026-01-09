@@ -1,8 +1,8 @@
 # Finuts Roadmap
 
-**Last Updated:** 2026-01-03
-**Total Tests:** 555 (280 shared + 275 composeApp)
-**Plan File:** [compiled-imagining-sparrow.md](~/.claude/plans/compiled-imagining-sparrow.md)
+**Last Updated:** 2026-01-09
+**Total Tests:** 859 (540 shared + 319 composeApp)
+**Plan File:** [async-cooking-bird.md](~/.claude/plans/async-cooking-bird.md)
 
 ---
 
@@ -24,25 +24,31 @@
 - [x] Account management (CRUD, archive, multi-currency)
 - [x] Transaction CRUD (list, detail, add/edit, delete)
 - [x] Categories (13 defaults + custom)
+- [x] Category Management UI (Settings → Categories)
 - [x] Budgets (full CRUD with progress tracking)
 - [x] Quick add transaction (<30s target met)
 - [x] Settings with DataStore preferences
 - [x] Basic reports/charts (KoalaPlot donut chart)
 - [x] Transfers (double-entry accounting)
+- [x] Empty states for Dashboard sections
 
 ### Phase 2: AI Features (Weeks 9-14)
-**Status**: ⏳ Pending
+**Status**: ⏳ In Progress (65%)
 
 | Milestone | Target | Status |
 |-----------|--------|--------|
 | M4: Android Release | Week 9-10 | ⏳ Pending |
-| M5: AI Features | Week 11-12 | ⏳ Pending |
+| M5: AI Features | Week 11-12 | ⏳ In Progress |
 | M6: iOS Release | Week 13-14 | ⏳ Pending |
 
 **Features**:
-- [ ] AI categorization (GPT-4o-mini/Claude Haiku)
+- [x] AI categorization core (3-tier: rules + GPT-4o-mini + GPT-4o)
+- [x] AI categorization integration (import flow + automatic category assignment)
+- [ ] AI categorization UI (manual review/override)
 - [ ] AI insights
-- [ ] Bank PDF import (Kaspi, Halyk)
+- [x] Bank import parsers (CSV, OFX, QIF)
+- [x] Bank import file picker (PDF + images for OCR)
+- [ ] Bank import orchestrator and UI
 - [ ] Google Play launch
 - [ ] App Store launch
 
@@ -65,8 +71,9 @@
 
 ## Current Focus
 
-**Milestone**: M4 - Android Release
-**Current Iteration**: 11 - AI Categorization (Planned)
+**Milestone**: M5 - AI Features
+**Current Iteration**: 16 - Android Release Prep
+**Previous Iteration**: 15 - Import Feature 100% Complete ✅
 
 ### Completed Iterations
 | # | Name | Date | Tests Added |
@@ -77,18 +84,26 @@
 | 8 | Transaction Detail/Edit | 2026-01-02 | +30 |
 | 9 | Basic Reports/Charts | 2026-01-03 | +44 |
 | 10 | Transfers (double-entry) | 2026-01-03 | +48 |
+| 11 | AI Categorization (Tier 1) | 2026-01-04 | +78 |
+| 12 | Bank Import Parsers | 2026-01-05/06 | +178 |
+| 13 | Category Management UI | 2026-01-08 | 0 (TDD gap) |
+| 14 | Category Testing (TDD) | 2026-01-08 | +44 |
+| 15 | Import Feature 100% | 2026-01-09 | +4 |
 
 ### Next Iterations
-- **Iteration 11**: AI Categorization (3-tier: rules + GPT-4o-mini + GPT-4o)
-- **Iteration 12**: Android Release Prep (testing, polish, Play Store)
-- **Iteration 13**: iOS Release Prep (testing, polish, App Store)
+- **Iteration 16**: Android Release Prep (testing, polish, Play Store)
+- **Iteration 17**: AI Insights
+- **Iteration 18**: iOS Release Prep
+- **Iteration 19**: Bank Import UI polish
 
 ### Technology Decisions
 | Feature | Technology | ADR |
 |---------|------------|-----|
 | Charts | KoalaPlot 0.10.4 | [ADR-005](decisions/005-koalaplot-charts.md) |
+| AI Tier 1 | Rule-based + MerchantDB | Implemented |
 | AI Tier 2 | GPT-4o-mini / Claude Haiku | Research |
 | AI Tier 3 | GPT-4o / Claude Sonnet | Research |
+| Bank Import | 4-tier: Format→Parsers→ML→LLM | Research |
 
 ---
 
@@ -108,13 +123,13 @@
 | Multi-currency | ✅ Complete | KZT, USD, EUR, RUB support |
 | Offline-first | ✅ Complete | Room database, local storage |
 
-### Phase 2: AI Features (Pending)
+### Phase 2: AI Features (In Progress)
 
 | PRD Feature | Status | Notes |
 |-------------|--------|-------|
-| AI categorization | ⏳ Pending | GPT-4o-mini integration planned |
+| AI categorization | ✅ Core done | 3-tier implemented, UI pending |
 | AI insights | ⏳ Pending | Financial recommendations |
-| Bank PDF import | ⏳ Pending | Kaspi, Halyk parsers |
+| Bank statement import | ⏳ 50% done | Parsers complete, orchestrator/UI pending |
 
 ### Phase 3: Advanced (Pending)
 
@@ -143,9 +158,9 @@
 
 | Module | Tests | Status |
 |--------|-------|--------|
-| shared/ | 280 | ✅ |
-| composeApp/ | 275 | ✅ |
-| **Total** | **555** | ✅ |
+| shared/ | 536 | ✅ |
+| composeApp/ | 319 | ✅ |
+| **Total** | **855** | ✅ |
 
 ### By Feature
 | Feature | Tests |
@@ -155,9 +170,12 @@
 | Budgets | 68 |
 | Reports | 44 |
 | Transfers | 48 |
+| AI Categorization | 78 |
+| Bank Import | 178 |
 | Dashboard | 16 |
 | Settings | 13 |
-| UI Components | 26 |
+| Categories | 32 |
+| UI Components | 38 |
 
 ---
 

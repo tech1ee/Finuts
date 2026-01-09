@@ -10,10 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,17 +39,18 @@ import finuts.composeapp.generated.resources.goal_get_organized
 import finuts.composeapp.generated.resources.goal_save_money
 import finuts.composeapp.generated.resources.goal_track_spending
 import finuts.composeapp.generated.resources.onboarding_goal_cta
+import finuts.composeapp.generated.resources.onboarding_goal_subtitle
 import finuts.composeapp.generated.resources.onboarding_goal_title
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Goal selection step - user picks their primary financial goal.
+ * Goal selection step - user picks their financial goals (multiple selection).
  */
 @Composable
 fun GoalSelectionStep(
-    selectedGoal: UserGoal,
-    onGoalSelected: (UserGoal) -> Unit,
+    selectedGoals: Set<UserGoal>,
+    onGoalToggled: (UserGoal) -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -66,6 +68,15 @@ fun GoalSelectionStep(
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(FinutsSpacing.xs))
+
+        Text(
+            text = stringResource(Res.string.onboarding_goal_subtitle),
+            style = FinutsTypography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = FinutsColors.TextSecondary
+        )
+
         Spacer(modifier = Modifier.height(FinutsSpacing.xl))
 
         Column(
@@ -75,29 +86,29 @@ fun GoalSelectionStep(
                 goal = UserGoal.TRACK_SPENDING,
                 titleRes = Res.string.goal_track_spending,
                 icon = TablerIcons.ChartPie,
-                isSelected = selectedGoal == UserGoal.TRACK_SPENDING,
-                onClick = { onGoalSelected(UserGoal.TRACK_SPENDING) }
+                isSelected = UserGoal.TRACK_SPENDING in selectedGoals,
+                onClick = { onGoalToggled(UserGoal.TRACK_SPENDING) }
             )
             GoalOption(
                 goal = UserGoal.SAVE_MONEY,
                 titleRes = Res.string.goal_save_money,
                 icon = TablerIcons.Coin,
-                isSelected = selectedGoal == UserGoal.SAVE_MONEY,
-                onClick = { onGoalSelected(UserGoal.SAVE_MONEY) }
+                isSelected = UserGoal.SAVE_MONEY in selectedGoals,
+                onClick = { onGoalToggled(UserGoal.SAVE_MONEY) }
             )
             GoalOption(
                 goal = UserGoal.GET_ORGANIZED,
                 titleRes = Res.string.goal_get_organized,
                 icon = TablerIcons.ListCheck,
-                isSelected = selectedGoal == UserGoal.GET_ORGANIZED,
-                onClick = { onGoalSelected(UserGoal.GET_ORGANIZED) }
+                isSelected = UserGoal.GET_ORGANIZED in selectedGoals,
+                onClick = { onGoalToggled(UserGoal.GET_ORGANIZED) }
             )
             GoalOption(
                 goal = UserGoal.BUDGET_BETTER,
                 titleRes = Res.string.goal_budget_better,
                 icon = TablerIcons.ReportMoney,
-                isSelected = selectedGoal == UserGoal.BUDGET_BETTER,
-                onClick = { onGoalSelected(UserGoal.BUDGET_BETTER) }
+                isSelected = UserGoal.BUDGET_BETTER in selectedGoals,
+                onClick = { onGoalToggled(UserGoal.BUDGET_BETTER) }
             )
         }
 
@@ -106,7 +117,7 @@ fun GoalSelectionStep(
         Button(
             onClick = onNext,
             modifier = Modifier.fillMaxWidth(),
-            enabled = selectedGoal != UserGoal.NOT_SET
+            enabled = selectedGoals.isNotEmpty()
         ) {
             Text(text = stringResource(Res.string.onboarding_goal_cta))
         }
@@ -125,17 +136,13 @@ private fun GoalOption(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .selectable(
-                selected = isSelected,
-                onClick = onClick,
-                role = Role.RadioButton
+            .toggleable(
+                value = isSelected,
+                onValueChange = { onClick() },
+                role = Role.Checkbox
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                FinutsColors.AccentMuted
-            } else {
-                FinutsColors.Surface
-            }
+            containerColor = if (isSelected) FinutsColors.AccentMuted else FinutsColors.Surface
         ),
         border = if (isSelected) {
             BorderStroke(2.dp, FinutsColors.Accent)
@@ -150,24 +157,20 @@ private fun GoalOption(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(FinutsSpacing.md)
         ) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = null // Parent handles click
+            )
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(FinutsSpacing.accountLogoSize),
-                tint = if (isSelected) {
-                    FinutsColors.Accent
-                } else {
-                    FinutsColors.TextSecondary
-                }
+                tint = if (isSelected) FinutsColors.Accent else FinutsColors.TextSecondary
             )
             Text(
                 text = stringResource(titleRes),
                 style = FinutsTypography.titleMedium,
-                color = if (isSelected) {
-                    FinutsColors.TextPrimary
-                } else {
-                    FinutsColors.TextPrimary
-                }
+                modifier = Modifier.weight(1f)
             )
         }
     }

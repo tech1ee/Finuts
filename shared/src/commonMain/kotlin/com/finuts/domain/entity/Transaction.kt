@@ -22,8 +22,20 @@ data class Transaction(
     val updatedAt: Instant,
     // Transfer fields: used when type == TRANSFER
     val linkedTransactionId: String? = null,
-    val transferAccountId: String? = null
-)
+    val transferAccountId: String? = null,
+    // AI categorization metadata (Tier 0-3 tracking)
+    val categorizationSource: CategorizationSource? = null,
+    val categorizationConfidence: Float? = null
+) {
+    /** True if category was assigned by AI (Tier 0-3, not manual) */
+    val isAICategorized: Boolean
+        get() = categorizationSource != null && categorizationSource != CategorizationSource.USER
+
+    /** True if categorization confidence is below the high threshold (needs review) */
+    val needsCategoryReview: Boolean
+        get() = categorizationConfidence != null &&
+                categorizationConfidence < CategorizationResult.HIGH_CONFIDENCE_THRESHOLD
+}
 
 @Serializable
 enum class TransactionType {

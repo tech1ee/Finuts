@@ -8,6 +8,7 @@ import com.finuts.domain.model.UserPreferences
 import com.finuts.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -19,6 +20,7 @@ class SettingsViewModel(
 ) : BaseViewModel() {
 
     val preferences: StateFlow<UserPreferences> = preferencesRepository.preferences
+        .catch { emit(UserPreferences()) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),

@@ -154,4 +154,115 @@ class TransactionTest {
         assertEquals(4, tx.tags.size)
         assertEquals(tags, tx.tags)
     }
+
+    // ==================== AI Categorization Tests ====================
+
+    @Test
+    fun `Transaction defaults categorizationSource to null`() {
+        val tx = TestData.transaction()
+        assertNull(tx.categorizationSource)
+    }
+
+    @Test
+    fun `Transaction defaults categorizationConfidence to null`() {
+        val tx = TestData.transaction()
+        assertNull(tx.categorizationConfidence)
+    }
+
+    @Test
+    fun `isAICategorized returns false when categorizationSource is null`() {
+        val tx = TestData.transaction(categorizationSource = null)
+        assertFalse(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns false when categorizationSource is USER`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.USER)
+        assertFalse(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is USER_LEARNED`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.USER_LEARNED)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is RULE_BASED`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.RULE_BASED)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is MERCHANT_DATABASE`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.MERCHANT_DATABASE)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is ON_DEVICE_ML`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.ON_DEVICE_ML)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is LLM_TIER2`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.LLM_TIER2)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `isAICategorized returns true when categorizationSource is LLM_TIER3`() {
+        val tx = TestData.transaction(categorizationSource = CategorizationSource.LLM_TIER3)
+        assertTrue(tx.isAICategorized)
+    }
+
+    @Test
+    fun `needsCategoryReview returns false when confidence is null`() {
+        val tx = TestData.transaction(categorizationConfidence = null)
+        assertFalse(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `needsCategoryReview returns false when confidence is at HIGH threshold`() {
+        val tx = TestData.transaction(categorizationConfidence = 0.85f)
+        assertFalse(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `needsCategoryReview returns false when confidence is above HIGH threshold`() {
+        val tx = TestData.transaction(categorizationConfidence = 0.95f)
+        assertFalse(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `needsCategoryReview returns true when confidence is just below HIGH threshold`() {
+        val tx = TestData.transaction(categorizationConfidence = 0.84f)
+        assertTrue(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `needsCategoryReview returns true when confidence is medium`() {
+        val tx = TestData.transaction(categorizationConfidence = 0.75f)
+        assertTrue(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `needsCategoryReview returns true when confidence is low`() {
+        val tx = TestData.transaction(categorizationConfidence = 0.50f)
+        assertTrue(tx.needsCategoryReview)
+    }
+
+    @Test
+    fun `Transaction can be created with AI categorization fields`() {
+        val tx = TestData.transaction(
+            categorizationSource = CategorizationSource.USER_LEARNED,
+            categorizationConfidence = 0.92f
+        )
+
+        assertEquals(CategorizationSource.USER_LEARNED, tx.categorizationSource)
+        assertEquals(0.92f, tx.categorizationConfidence)
+        assertTrue(tx.isAICategorized)
+        assertFalse(tx.needsCategoryReview)
+    }
 }

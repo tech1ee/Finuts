@@ -63,6 +63,7 @@ fun TransactionListItem(
     transactionType: TransactionType,
     merchantInitial: Char? = null,
     avatarColor: Color = FinutsColors.Primary,
+    isAISuggested: Boolean = false,
     onClick: () -> Unit = {},
     showDivider: Boolean = true,
     modifier: Modifier = Modifier
@@ -122,8 +123,10 @@ fun TransactionListItem(
 
                 Spacer(modifier = Modifier.height(FinutsSpacing.xxs)) // 2dp
 
+                // Secondary line: Category (with AI indicator) • Time
+                val categoryText = if (isAISuggested) "✨ $category" else category
                 Text(
-                    text = "$category • $time",
+                    text = "$categoryText • $time",
                     style = FinutsTypography.bodyMedium,
                     color = FinutsColors.TextTertiary,
                     maxLines = 1,

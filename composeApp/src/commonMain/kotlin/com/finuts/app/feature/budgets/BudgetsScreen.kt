@@ -24,6 +24,7 @@ import com.finuts.app.feature.budgets.components.SwipeableBudgetItem
 import com.finuts.app.feature.budgets.states.BudgetsEmptyState
 import com.finuts.app.navigation.Route
 import com.finuts.app.presentation.base.NavigationEvent
+import com.finuts.app.ui.components.state.AnimatedStateContent
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
@@ -61,29 +62,34 @@ fun BudgetsScreen(
         }
     }
 
-    when (val state = uiState) {
-        is BudgetsUiState.Loading -> LoadingContent()
-        is BudgetsUiState.Error -> ErrorContent(state.message)
-        is BudgetsUiState.Success -> {
-            if (state.isEmpty) {
-                BudgetsEmptyState(
-                    onAddBudget = { viewModel.onAddBudgetClick() },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh() },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    BudgetsList(
-                        budgets = state.budgets,
-                        totalSpent = state.totalSpent,
-                        totalBudgeted = state.totalBudgeted,
-                        onBudgetClick = { viewModel.onBudgetClick(it) },
-                        onDeactivate = { viewModel.onDeactivateBudget(it) },
-                        onAddBudget = { viewModel.onAddBudgetClick() }
+    AnimatedStateContent(
+        targetState = uiState,
+        contentKey = { it::class }
+    ) { state ->
+        when (state) {
+            is BudgetsUiState.Loading -> LoadingContent()
+            is BudgetsUiState.Error -> ErrorContent(state.message)
+            is BudgetsUiState.Success -> {
+                if (state.isEmpty) {
+                    BudgetsEmptyState(
+                        onAddBudget = { viewModel.onAddBudgetClick() },
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refresh() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        BudgetsList(
+                            budgets = state.budgets,
+                            totalSpent = state.totalSpent,
+                            totalBudgeted = state.totalBudgeted,
+                            onBudgetClick = { viewModel.onBudgetClick(it) },
+                            onDeactivate = { viewModel.onDeactivateBudget(it) },
+                            onAddBudget = { viewModel.onAddBudgetClick() }
+                        )
+                    }
                 }
             }
         }

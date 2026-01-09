@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +33,7 @@ class ReportsViewModel(
     val uiState: StateFlow<ReportsUiState> = _selectedPeriod
         .flatMapLatest { period ->
             getSpendingReportUseCase.execute(period)
-                .map { report ->
+                .map<_, ReportsUiState> { report ->
                     ReportsUiState.Success(
                         period = report.period,
                         totalIncome = report.totalIncome,
@@ -42,6 +43,9 @@ class ReportsViewModel(
                         savingsRate = report.savingsRate
                     )
                 }
+        }
+        .catch { e ->
+            emit(ReportsUiState.Error(e.message ?: "Unknown error"))
         }
         .stateIn(
             scope = viewModelScope,
@@ -54,7 +58,7 @@ class ReportsViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        safeScope.launch {
             _isRefreshing.value = true
             delay(300)
             _isRefreshing.value = false

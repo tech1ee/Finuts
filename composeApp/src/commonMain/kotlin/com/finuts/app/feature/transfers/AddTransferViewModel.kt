@@ -55,7 +55,7 @@ class AddTransferViewModel(
     }
 
     private fun loadAccounts() {
-        viewModelScope.launch {
+        safeScope.launch {
             accountRepository.getActiveAccounts().collect { accounts ->
                 _uiState.update { it.copy(accounts = accounts) }
             }
@@ -86,13 +86,13 @@ class AddTransferViewModel(
         val state = _uiState.value
 
         if (!state.isValid) {
-            viewModelScope.launch {
+            safeScope.launch {
                 _events.emit(AddTransferEvent.Error("Please fill all required fields"))
             }
             return
         }
 
-        viewModelScope.launch {
+        safeScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             val result = createTransferUseCase.execute(

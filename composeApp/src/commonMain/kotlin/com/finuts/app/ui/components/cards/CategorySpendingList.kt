@@ -1,6 +1,7 @@
 package com.finuts.app.ui.components.cards
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,8 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -22,7 +21,13 @@ import androidx.compose.ui.unit.dp
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
+import com.finuts.app.ui.components.feedback.EmptyStatePrompt
 import com.finuts.app.ui.icons.CategoryIcon
+import finuts.composeapp.generated.resources.Res
+import finuts.composeapp.generated.resources.add_transaction
+import finuts.composeapp.generated.resources.no_spending_data
+import finuts.composeapp.generated.resources.no_spending_data_desc
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Category Spending List - Top Spending Categories
@@ -58,12 +63,23 @@ data class CategorySpending(
 private val IconShape = RoundedCornerShape(8.dp)
 private val BarShape = RoundedCornerShape(2.dp)
 
+private val CardShape = RoundedCornerShape(12.dp)
+
 @Composable
 fun CategorySpendingList(
     categories: List<CategorySpending>,
     currencySymbol: String = "₸",
+    onAddTransaction: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    if (categories.isEmpty()) {
+        CategorySpendingEmptyState(
+            onAddTransaction = onAddTransaction ?: {},
+            modifier = modifier
+        )
+        return
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
@@ -77,6 +93,34 @@ fun CategorySpendingList(
                 Spacer(modifier = Modifier.height(FinutsSpacing.sm)) // 8dp between items
             }
         }
+    }
+}
+
+/**
+ * Empty state for CategorySpendingList when no spending data.
+ */
+@Composable
+private fun CategorySpendingEmptyState(
+    onAddTransaction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(CardShape)
+            .background(FinutsColors.Surface)
+            .border(
+                width = 1.dp,
+                color = FinutsColors.BorderSubtle,
+                shape = CardShape
+            )
+    ) {
+        EmptyStatePrompt(
+            title = stringResource(Res.string.no_spending_data),
+            description = stringResource(Res.string.no_spending_data_desc),
+            actionLabel = stringResource(Res.string.add_transaction),
+            onAction = onAddTransaction
+        )
     }
 }
 

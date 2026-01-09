@@ -1,6 +1,7 @@
 package com.finuts.data.local.mapper
 
 import com.finuts.data.local.entity.TransactionEntity
+import com.finuts.domain.entity.CategorizationSource
 import com.finuts.domain.entity.Transaction
 import com.finuts.domain.entity.TransactionType
 import kotlinx.datetime.Instant
@@ -26,7 +27,9 @@ fun TransactionEntity.toDomain(): Transaction = Transaction(
     createdAt = Instant.fromEpochMilliseconds(createdAt),
     updatedAt = Instant.fromEpochMilliseconds(updatedAt),
     linkedTransactionId = linkedTransactionId,
-    transferAccountId = transferAccountId
+    transferAccountId = transferAccountId,
+    categorizationSource = categorizationSource?.let { runCatching { CategorizationSource.valueOf(it) }.getOrNull() },
+    categorizationConfidence = categorizationConfidence
 )
 
 fun Transaction.toEntity(): TransactionEntity = TransactionEntity(
@@ -46,5 +49,7 @@ fun Transaction.toEntity(): TransactionEntity = TransactionEntity(
     createdAt = createdAt.toEpochMilliseconds(),
     updatedAt = updatedAt.toEpochMilliseconds(),
     linkedTransactionId = linkedTransactionId,
-    transferAccountId = transferAccountId
+    transferAccountId = transferAccountId,
+    categorizationSource = categorizationSource?.name,
+    categorizationConfidence = categorizationConfidence
 )

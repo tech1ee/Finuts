@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -17,13 +21,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import androidx.compose.runtime.collectAsState
 import com.finuts.app.feature.accounts.AccountDetailScreen
 import com.finuts.app.feature.accounts.AccountsScreen
 import com.finuts.app.feature.accounts.AddEditAccountScreen
 import com.finuts.app.feature.budgets.AddEditBudgetScreen
 import com.finuts.app.feature.budgets.BudgetDetailScreen
 import com.finuts.app.feature.budgets.BudgetsScreen
+import com.finuts.app.feature.categories.AddEditCategoryScreen
+import com.finuts.app.feature.categories.CategoryManagementScreen
 import com.finuts.app.feature.dashboard.DashboardScreen
 import com.finuts.app.feature.onboarding.OnboardingScreen
 import com.finuts.app.feature.reports.ReportsScreen
@@ -33,6 +38,8 @@ import com.finuts.app.feature.transactions.QuickAddSheet
 import com.finuts.app.feature.transactions.TransactionDetailScreen
 import com.finuts.app.feature.transactions.TransactionsScreen
 import com.finuts.app.feature.transfers.AddTransferScreen
+import com.finuts.app.feature.`import`.ImportScreen
+import com.finuts.domain.entity.CategoryType
 import com.finuts.app.ui.components.navigation.PillBottomNavBar
 import com.finuts.app.ui.components.navigation.PillNavItem
 import com.finuts.domain.model.UserPreferences
@@ -60,6 +67,9 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // Quick Add Sheet state (shown as overlay, not navigation route)
+    var showQuickAddSheet by remember { mutableStateOf(false) }
 
     // Check onboarding status
     val preferencesRepository: PreferencesRepository = koinInject()
@@ -101,16 +111,11 @@ fun AppNavigation() {
             startDestination = startDestination,
             modifier = Modifier.fillMaxSize()
         ) {
-            // Onboarding
+            // Onboarding (account creation is now inline)
             composable<Route.Onboarding> {
                 OnboardingScreen(
                     onComplete = {
                         navController.navigate(Route.Dashboard) {
-                            popUpTo(Route.Onboarding) { inclusive = true }
-                        }
-                    },
-                    onNavigateToAddAccount = {
-                        navController.navigate(Route.AddAccount(source = "onboarding")) {
                             popUpTo(Route.Onboarding) { inclusive = true }
                         }
                     }
@@ -124,16 +129,19 @@ fun AppNavigation() {
                         navController.navigate(Route.AccountDetail(accountId))
                     },
                     onAddTransactionClick = {
-                        navController.navigate(Route.AddTransaction)
+                        showQuickAddSheet = true
                     },
                     onAddAccountClick = {
-                        navController.navigate(Route.AddAccount())
+                        navController.navigate(Route.AddAccount)
                     },
                     onSeeAllAccountsClick = {
                         navController.navigate(Route.Accounts)
                     },
                     onNavigateToHistory = {
                         navController.navigate(Route.Transactions)
+                    },
+                    onCreateBudgetClick = {
+                        navController.navigate(Route.AddBudget)
                     }
                 )
             }
@@ -144,7 +152,7 @@ fun AppNavigation() {
                         navController.navigate(Route.AccountDetail(accountId))
                     },
                     onAddAccountClick = {
-                        navController.navigate(Route.AddAccount())
+                        navController.navigate(Route.AddAccount)
                     }
                 )
             }
@@ -155,7 +163,7 @@ fun AppNavigation() {
                         navController.navigate(Route.TransactionDetail(transactionId))
                     },
                     onAddTransactionClick = {
-                        navController.navigate(Route.AddTransaction)
+                        showQuickAddSheet = true
                     }
                 )
             }
@@ -172,7 +180,11 @@ fun AppNavigation() {
             }
 
             composable<Route.Settings> {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToCategories = {
+                        navController.navigate(Route.CategoryManagement)
+                    }
+                )
             }
 
             composable<Route.Reports> {
@@ -187,7 +199,7 @@ fun AppNavigation() {
                     onNavigateBack = { navController.popBackStack() },
                     onEditAccount = { navController.navigate(Route.EditAccount(it)) },
                     onTransactionClick = { navController.navigate(Route.TransactionDetail(it)) },
-                    onAddTransaction = { navController.navigate(Route.AddTransaction) }
+                    onAddTransaction = { showQuickAddSheet = true }
                 )
             }
 
@@ -211,26 +223,10 @@ fun AppNavigation() {
             }
 
             // Create/Edit screens
-            composable<Route.AddTransaction> {
-                QuickAddSheet(
-                    onDismiss = { navController.popBackStack() },
-                    onSuccess = { navController.popBackStack() }
-                )
-            }
-
-            composable<Route.AddAccount> { backStackEntry ->
-                val route = backStackEntry.toRoute<Route.AddAccount>()
+            composable<Route.AddAccount> {
                 AddEditAccountScreen(
                     accountId = null,
-                    onNavigateBack = {
-                        if (route.source == "onboarding") {
-                            navController.navigate(Route.Dashboard) {
-                                popUpTo<Route.AddAccount> { inclusive = true }
-                            }
-                        } else {
-                            navController.popBackStack()
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -270,6 +266,50 @@ fun AppNavigation() {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
+            // Category management screens
+            composable<Route.CategoryManagement> {
+                CategoryManagementScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onAddCategory = { type ->
+                        navController.navigate(Route.AddCategory(type.name))
+                    },
+                    onEditCategory = { categoryId ->
+                        navController.navigate(Route.EditCategory(categoryId))
+                    }
+                )
+            }
+
+            composable<Route.AddCategory> { backStackEntry ->
+                val route = backStackEntry.toRoute<Route.AddCategory>()
+                AddEditCategoryScreen(
+                    categoryId = null,
+                    defaultType = CategoryType.valueOf(route.type),
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Route.EditCategory> { backStackEntry ->
+                val route = backStackEntry.toRoute<Route.EditCategory>()
+                AddEditCategoryScreen(
+                    categoryId = route.categoryId,
+                    defaultType = CategoryType.EXPENSE,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // Bank import
+            composable<Route.Import> {
+                ImportScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToTransactions = {
+                        navController.navigate(Route.Transactions) {
+                            popUpTo(Route.Dashboard) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
         }
 
         // Floating Pill Navigation (overlays content)
@@ -280,6 +320,14 @@ fun AppNavigation() {
                     navController.navigateToPillNavItem(item)
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        // Quick Add Transaction Sheet (modal overlay)
+        if (showQuickAddSheet) {
+            QuickAddSheet(
+                onDismiss = { showQuickAddSheet = false },
+                onSuccess = { showQuickAddSheet = false }
             )
         }
     }

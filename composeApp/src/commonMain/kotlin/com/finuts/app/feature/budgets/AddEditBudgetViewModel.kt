@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -40,6 +41,7 @@ class AddEditBudgetViewModel(
 
     val categories: StateFlow<List<Category>> = categoryRepository
         .getCategoriesByType(CategoryType.EXPENSE)
+        .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
@@ -47,7 +49,7 @@ class AddEditBudgetViewModel(
     }
 
     private fun loadExistingBudget() {
-        viewModelScope.launch {
+        safeScope.launch {
             val budget = budgetRepository.getBudgetById(budgetId!!).first()
             if (budget != null) {
                 _formState.update {

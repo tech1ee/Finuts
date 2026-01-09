@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,7 +42,10 @@ class BudgetsViewModel(
             BudgetProgress(budget = budget, spent = spent)
         }.sortedByDescending { it.percentUsed }
 
-        BudgetsUiState.Success(budgets = budgetProgresses)
+        val result: BudgetsUiState = BudgetsUiState.Success(budgets = budgetProgresses)
+        result
+    }.catch { e ->
+        emit(BudgetsUiState.Error(e.message ?: "Unknown error"))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -69,7 +73,7 @@ class BudgetsViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        safeScope.launch {
             _isRefreshing.value = true
             delay(300)
             _isRefreshing.value = false

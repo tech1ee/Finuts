@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
+import com.finuts.app.ui.components.category.AIConfidenceBadge
+import com.finuts.app.ui.components.category.CategoryChipReadOnly
 import com.finuts.app.ui.icons.FinutsIcons
 import com.finuts.domain.entity.Transaction
 import kotlinx.datetime.TimeZone
@@ -51,17 +53,16 @@ fun TransactionDetailInfo(
             modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
         )
 
-        categoryName?.let { name ->
-            InfoRow(
-                icon = FinutsIcons.Tag,
-                label = "Category",
-                value = name
-            )
-            HorizontalDivider(
-                color = FinutsColors.BorderSubtle,
-                modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
-            )
-        }
+        // Category row with AI indicator
+        CategoryInfoRow(
+            categoryName = categoryName,
+            isAICategorized = transaction.isAICategorized,
+            confidence = transaction.categorizationConfidence
+        )
+        HorizontalDivider(
+            color = FinutsColors.BorderSubtle,
+            modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
+        )
 
         InfoRow(
             icon = FinutsIcons.Calendar,
@@ -79,6 +80,53 @@ fun TransactionDetailInfo(
             label = "Time",
             value = timeString
         )
+    }
+}
+
+/**
+ * Category info row with AI indicator and confidence badge.
+ */
+@Composable
+private fun CategoryInfoRow(
+    categoryName: String?,
+    isAICategorized: Boolean,
+    confidence: Float?,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = FinutsSpacing.screenPadding, vertical = FinutsSpacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = FinutsIcons.Tag,
+            contentDescription = "Category",
+            tint = FinutsColors.TextSecondary,
+            modifier = Modifier.size(20.dp)
+        )
+
+        Spacer(Modifier.width(FinutsSpacing.md))
+
+        Text(
+            text = "Category",
+            style = FinutsTypography.bodyMedium,
+            color = FinutsColors.TextSecondary
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        // Category chip with AI indicator
+        CategoryChipReadOnly(
+            category = categoryName,
+            isAISuggested = isAICategorized
+        )
+
+        // Confidence badge (only shows for low/medium confidence)
+        confidence?.let {
+            Spacer(Modifier.width(FinutsSpacing.xs))
+            AIConfidenceBadge(confidence = it)
+        }
     }
 }
 

@@ -54,6 +54,7 @@
     <string name="no_accounts">No Accounts Yet</string>
     <string name="no_accounts_desc">Add your first account to start tracking your finances.</string>
     <string name="archive">Archive</string>
+    <string name="account_archived">Account archived</string>
 
     <!-- Settings -->
     <string name="settings">Settings</string>
@@ -62,6 +63,9 @@
     <string name="language">Language</string>
     <string name="preferences">Preferences</string>
     <string name="default_currency">Default Currency</string>
+    <string name="data_management">Data Management</string>
+    <string name="categories">Categories</string>
+    <string name="manage_categories">Manage expense and income categories</string>
     <string name="security">Security</string>
     <string name="notifications">Notifications</string>
     <string name="biometric_lock">Biometric Lock</string>
@@ -91,14 +95,24 @@
     <string name="onboarding_welcome_title">Welcome to Finuts</string>
     <string name="onboarding_welcome_description">Take control of your finances with smart tracking, budgets, and insights.</string>
     <string name="onboarding_welcome_cta">Get Started</string>
-    <string name="onboarding_goal_title">What\'s your main goal?</string>
+    <string name="onboarding_currency_title">Choose Your Currency</string>
+    <string name="onboarding_language_title">Choose Your Language</string>
+    <string name="onboarding_currency_language_cta">Continue</string>
+    <string name="onboarding_goal_title">What are your goals?</string>
+    <string name="onboarding_goal_subtitle">Select all that apply</string>
     <string name="onboarding_goal_cta">Continue</string>
-    <string name="onboarding_account_title">Add Your First Account</string>
-    <string name="onboarding_account_description">Start by adding a bank account, cash wallet, or credit card to track your money.</string>
+    <string name="onboarding_account_title">Create Your First Account</string>
+    <string name="onboarding_account_description">Add a wallet, bank account, or card to start tracking your money.</string>
+    <string name="onboarding_account_name">Account Name</string>
+    <string name="onboarding_account_type">Account Type</string>
+    <string name="onboarding_account_balance">Initial Balance</string>
+    <string name="onboarding_account_balance_hint">0.00</string>
+    <string name="onboarding_account_create">Create Account</string>
     <string name="onboarding_account_add">Add Account</string>
-    <string name="onboarding_account_skip">Later</string>
+    <string name="onboarding_account_skip">Skip for now</string>
     <string name="onboarding_complete_title">You\'re All Set!</string>
     <string name="onboarding_complete_description">Start tracking your finances and achieve your financial goals.</string>
+    <string name="onboarding_complete_account_created">Account "%1$s" created</string>
     <string name="onboarding_complete_cta">Let\'s Go</string>
 
     <!-- Contextual Empty States -->
@@ -106,6 +120,15 @@
     <string name="add_first_account_desc">Create your first account to start tracking your finances.</string>
     <string name="account_ready_title">Account ready!</string>
     <string name="add_first_transaction_desc">Add your first transaction to see insights.</string>
+    <string name="no_budget_yet">No Budget Set</string>
+    <string name="no_budget_yet_desc">Create a budget to track your monthly spending.</string>
+    <string name="create_budget">Create Budget</string>
+    <string name="no_spending_data">No Spending Data</string>
+    <string name="no_spending_data_desc">Add transactions to see your spending by category.</string>
+
+    <!-- First Transaction Prompt -->
+    <string name="start_tracking_title">Start tracking your spending</string>
+    <string name="start_tracking_desc">Add your first transaction to see insights</string>
     <string name="no_accounts_for_transactions">Create an account first</string>
     <string name="no_accounts_for_transactions_desc">You need at least one account before adding transactions.</string>
 

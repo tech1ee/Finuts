@@ -195,7 +195,7 @@ class AccountsViewModelTest {
 
             val event = awaitItem()
             assertIs<NavigationEvent.NavigateTo>(event)
-            assertEquals(Route.AddAccount(), event.route)
+            assertEquals(Route.AddAccount, event.route)
         }
     }
 
@@ -259,6 +259,109 @@ class AccountsViewModelTest {
 
             assertTrue(awaitItem()) // Refreshing
             assertFalse(awaitItem()) // Done
+        }
+    }
+
+    // ============ Soft Archive / Undo Tests ============
+
+    @Test
+    fun `softArchiveAccount hides account from active list`() = runTest {
+        val account = TestData.account(id = "1", name = "Cash", isArchived = false)
+        accountRepository.setAccounts(listOf(account))
+
+        viewModel.uiState.test {
+            awaitItem() // Skip Loading
+            advanceUntilIdle()
+
+            var state = awaitItem()
+            assertIs<AccountsUiState.Success>(state)
+            assertEquals(1, state.activeAccounts.size)
+
+            viewModel.softArchiveAccount("1")
+            advanceUntilIdle()
+
+            state = awaitItem()
+            assertIs<AccountsUiState.Success>(state)
+            assertEquals(0, state.activeAccounts.size)
+            // Not yet in archived (soft archive)
+            assertEquals(0, state.archivedAccounts.size)
+        }
+    }
+
+    @Test
+    fun `restoreAccount brings back soft-archived account`() = runTest {
+        val account = TestData.account(id = "1", name = "Cash", isArchived = false)
+        accountRepository.setAccounts(listOf(account))
+
+        viewModel.uiState.test {
+            awaitItem() // Skip Loading
+            advanceUntilIdle()
+
+            awaitItem() // Initial success
+
+            viewModel.softArchiveAccount("1")
+            advanceUntilIdle()
+
+            var state = awaitItem()
+            assertIs<AccountsUiState.Success>(state)
+            assertEquals(0, state.activeAccounts.size)
+
+            viewModel.restoreAccount("1")
+            advanceUntilIdle()
+
+            state = awaitItem()
+            assertIs<AccountsUiState.Success>(state)
+            assertEquals(1, state.activeAccounts.size)
+            assertEquals("Cash", state.activeAccounts.first().name)
+        }
+    }
+
+    @Test
+    fun `commitArchive persists soft-archived account to database`() = runTest {
+        val account = TestData.account(id = "1", name = "Cash", isArchived = false)
+        accountRepository.setAccounts(listOf(account))
+
+        viewModel.uiState.test {
+            awaitItem() // Skip Loading
+            advanceUntilIdle()
+
+            awaitItem() // Initial success
+
+            viewModel.softArchiveAccount("1")
+            advanceUntilIdle()
+            awaitItem() // Account hidden
+
+            viewModel.commitArchive("1")
+            advanceUntilIdle()
+
+            val state = awaitItem()
+            assertIs<AccountsUiState.Success>(state)
+            assertEquals(0, state.activeAccounts.size)
+            assertEquals(1, state.archivedAccounts.size)
+            assertEquals("Cash", state.archivedAccounts.first().name)
+        }
+    }
+
+    @Test
+    fun `commitArchive does nothing if account not soft-archived`() = runTest {
+        val account = TestData.account(id = "1", name = "Cash", isArchived = false)
+        accountRepository.setAccounts(listOf(account))
+
+        viewModel.uiState.test {
+            awaitItem() // Skip Loading
+            advanceUntilIdle()
+
+            val initialState = awaitItem()
+            assertIs<AccountsUiState.Success>(initialState)
+            assertEquals(1, initialState.activeAccounts.size)
+
+            // Try to commit without soft archive
+            viewModel.commitArchive("1")
+            advanceUntilIdle()
+
+            // Should still be active (no emission expected since nothing changed)
+            assertEquals(1, initialState.activeAccounts.size)
+            assertEquals(0, initialState.archivedAccounts.size)
         }
     }
 }

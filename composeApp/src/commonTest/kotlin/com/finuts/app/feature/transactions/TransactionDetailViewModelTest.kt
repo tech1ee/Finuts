@@ -5,6 +5,7 @@ import com.finuts.app.navigation.Route
 import com.finuts.app.presentation.base.NavigationEvent
 import com.finuts.app.test.TestData
 import com.finuts.app.test.fakes.FakeAccountRepository
+import com.finuts.app.test.fakes.FakeCategoryRepository
 import com.finuts.app.test.fakes.FakeTransactionRepository
 import com.finuts.domain.entity.TransactionType
 import kotlinx.coroutines.Dispatchers
@@ -33,12 +34,14 @@ class TransactionDetailViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var transactionRepository: FakeTransactionRepository
     private lateinit var accountRepository: FakeAccountRepository
+    private lateinit var categoryRepository: FakeCategoryRepository
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         transactionRepository = FakeTransactionRepository()
         accountRepository = FakeAccountRepository()
+        categoryRepository = FakeCategoryRepository()
     }
 
     @AfterTest
@@ -49,7 +52,8 @@ class TransactionDetailViewModelTest {
     private fun createViewModel(transactionId: String) = TransactionDetailViewModel(
         transactionId = transactionId,
         transactionRepository = transactionRepository,
-        accountRepository = accountRepository
+        accountRepository = accountRepository,
+        categoryRepository = categoryRepository
     )
 
     // === UI State Tests ===

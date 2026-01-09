@@ -8,6 +8,7 @@ import com.finuts.domain.entity.TransactionType
 import com.finuts.domain.repository.AccountRepository
 import com.finuts.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +44,7 @@ class TransactionsViewModel(
 
     val hasAccounts: StateFlow<Boolean> = accountRepository.getActiveAccounts()
         .map { it.isNotEmpty() }
+        .catch { emit(true) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -86,7 +88,7 @@ class TransactionsViewModel(
         }
 
         val grouped = groupTransactionsByDate(filtered.sortedByDescending { it.date })
-        TransactionsUiState.Success(
+        val result: TransactionsUiState = TransactionsUiState.Success(
             groupedTransactions = grouped,
             activeFilter = filter,
             totalCount = filtered.size,
@@ -94,6 +96,9 @@ class TransactionsViewModel(
             monthlyExpense = monthExpense,
             periodLabel = periodLabel
         )
+        result
+    }.catch { e ->
+        emit(TransactionsUiState.Error(e.message ?: "Unknown error"))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -117,7 +122,7 @@ class TransactionsViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        safeScope.launch {
             _isRefreshing.value = true
             kotlinx.coroutines.delay(300)
             _isRefreshing.value = false

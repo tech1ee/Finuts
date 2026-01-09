@@ -18,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.finuts.app.feature.transactions.components.TransactionForm
 import com.finuts.app.presentation.base.NavigationEvent
+import com.finuts.app.presentation.base.SnackbarMessageType
 import com.finuts.app.theme.FinutsColors
+import com.finuts.app.ui.components.snackbar.LocalSnackbarController
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
 import com.finuts.app.ui.components.form.FormTopBar
@@ -44,9 +46,24 @@ fun AddEditTransactionScreen(
         .find { it.id == formState.accountId }
         ?.currency?.symbol ?: "₸"
 
+    // Get snackbar controller for showing feedback
+    val snackbarController = LocalSnackbarController.current
+
+    // Handle navigation events
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
             if (event is NavigationEvent.PopBackStack) onNavigateBack()
+        }
+    }
+
+    // Handle snackbar events (learning feedback)
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvents.collect { event ->
+            when (event.type) {
+                SnackbarMessageType.SUCCESS -> snackbarController.showSuccess(event.message)
+                SnackbarMessageType.ERROR -> snackbarController.showError(event.message)
+                SnackbarMessageType.INFO -> snackbarController.showSuccess(event.message)
+            }
         }
     }
 

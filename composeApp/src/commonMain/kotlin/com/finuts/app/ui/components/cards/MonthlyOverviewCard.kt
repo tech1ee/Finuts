@@ -27,7 +27,13 @@ import androidx.compose.ui.unit.dp
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
+import com.finuts.app.ui.components.feedback.EmptyStatePrompt
 import com.finuts.app.ui.icons.FinutsIcons
+import finuts.composeapp.generated.resources.Res
+import finuts.composeapp.generated.resources.create_budget
+import finuts.composeapp.generated.resources.no_budget_yet
+import finuts.composeapp.generated.resources.no_budget_yet_desc
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Monthly Overview Card - Combines Spending Progress + Financial Health
@@ -54,13 +60,23 @@ private val ProgressShape = RoundedCornerShape(4.dp)
 @Composable
 fun MonthlyOverviewCard(
     spent: Long,
-    budget: Long,
+    budget: Long?,
     periodLabel: String = "December 2025",
     currencySymbol: String = "₸",
     comparisonToLastMonth: Float = 0f,
+    onCreateBudget: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val percentage = if (budget > 0) (spent.toFloat() / budget * 100) else 0f
+    // Show empty state when no budget is set
+    if (budget == null || budget == 0L) {
+        MonthlyOverviewEmptyState(
+            onCreateBudget = onCreateBudget ?: {},
+            modifier = modifier
+        )
+        return
+    }
+
+    val percentage = (spent.toFloat() / budget * 100)
     val animatedProgress by animateFloatAsState(
         targetValue = (percentage / 100f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 500),
@@ -230,4 +246,32 @@ private fun formatMoney(amount: Long, currencySymbol: String): String {
     val whole = amount / 100
     val formattedWhole = whole.toString().reversed().chunked(3).joinToString(",").reversed()
     return "$currencySymbol$formattedWhole"
+}
+
+/**
+ * Empty state for MonthlyOverviewCard when no budget is set.
+ */
+@Composable
+private fun MonthlyOverviewEmptyState(
+    onCreateBudget: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(CardShape)
+            .background(FinutsColors.Surface)
+            .border(
+                width = 1.dp,
+                color = FinutsColors.BorderSubtle,
+                shape = CardShape
+            )
+    ) {
+        EmptyStatePrompt(
+            title = stringResource(Res.string.no_budget_yet),
+            description = stringResource(Res.string.no_budget_yet_desc),
+            actionLabel = stringResource(Res.string.create_budget),
+            onAction = onCreateBudget
+        )
+    }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Text
@@ -36,8 +37,11 @@ import com.finuts.domain.model.AppTheme
 import finuts.composeapp.generated.resources.Res
 import finuts.composeapp.generated.resources.appearance
 import finuts.composeapp.generated.resources.biometric_lock
+import finuts.composeapp.generated.resources.categories
+import finuts.composeapp.generated.resources.data_management
 import finuts.composeapp.generated.resources.default_currency
 import finuts.composeapp.generated.resources.language
+import finuts.composeapp.generated.resources.manage_categories
 import finuts.composeapp.generated.resources.notifications
 import finuts.composeapp.generated.resources.preferences
 import finuts.composeapp.generated.resources.security
@@ -53,7 +57,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * Settings Screen with app preferences.
  */
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsScreen(
+    onNavigateToCategories: () -> Unit = {},
+    viewModel: SettingsViewModel = koinViewModel()
+) {
     val prefs by viewModel.preferences.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -98,6 +105,21 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
                     title = stringResource(Res.string.default_currency),
                     value = prefs.defaultCurrency,
                     onClick = { showCurrencyDialog = true }
+                )
+            }
+
+            Spacer(Modifier.height(FinutsSpacing.settingsGroupGap))
+
+            // Data Management
+            SettingsGroup(
+                title = stringResource(Res.string.data_management),
+                icon = Icons.Default.Category,
+                modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
+            ) {
+                SettingsRow(
+                    title = stringResource(Res.string.categories),
+                    value = stringResource(Res.string.manage_categories),
+                    onClick = onNavigateToCategories
                 )
             }
 

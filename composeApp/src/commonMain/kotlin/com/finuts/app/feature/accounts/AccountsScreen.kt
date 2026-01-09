@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.finuts.app.navigation.Route
 import com.finuts.app.presentation.base.NavigationEvent
+import com.finuts.app.ui.components.state.AnimatedStateContent
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsMoneyTypography
 import com.finuts.app.theme.FinutsSpacing
@@ -37,6 +38,8 @@ import com.finuts.app.ui.components.cards.AccountListItem
 import com.finuts.app.ui.components.cards.AccountType
 import com.finuts.app.ui.components.feedback.EmptyState
 import com.finuts.app.ui.components.navigation.FinutsTopBar
+import com.finuts.app.ui.components.snackbar.LocalSnackbarController
+import com.finuts.app.ui.components.snackbar.SnackbarDurations
 import com.finuts.domain.entity.Account
 import finuts.composeapp.generated.resources.Res
 import finuts.composeapp.generated.resources.accounts
@@ -44,6 +47,7 @@ import finuts.composeapp.generated.resources.total_balance
 import finuts.composeapp.generated.resources.active
 import finuts.composeapp.generated.resources.archived
 import finuts.composeapp.generated.resources.add_account
+import finuts.composeapp.generated.resources.account_archived
 import finuts.composeapp.generated.resources.archive
 import finuts.composeapp.generated.resources.no_accounts
 import finuts.composeapp.generated.resources.no_accounts_desc
@@ -59,6 +63,19 @@ fun AccountsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val snackbarController = LocalSnackbarController.current
+    val archivedMessage = stringResource(Res.string.account_archived)
+
+    // Handle archive with undo snackbar
+    val onArchiveWithUndo: (String) -> Unit = { accountId ->
+        viewModel.softArchiveAccount(accountId)
+        snackbarController.showUndoSnackbar(
+            message = archivedMessage,
+            durationMs = SnackbarDurations.ARCHIVE_ACCOUNT,
+            onUndo = { viewModel.restoreAccount(accountId) },
+            onTimeout = { viewModel.commitArchive(accountId) }
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
@@ -77,29 +94,34 @@ fun AccountsScreen(
     }
 
     // Simple layout without Scaffold (pill nav overlays)
-    when (val state = uiState) {
-        is AccountsUiState.Loading -> LoadingContent(Modifier.fillMaxSize())
-        is AccountsUiState.Error -> ErrorContent(state.message, Modifier.fillMaxSize())
-        is AccountsUiState.Success -> {
-            if (state.isEmpty) {
-                EmptyAccountsContent(
-                    onAddAccount = { viewModel.onAddAccountClick() },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh() },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    AccountsList(
-                        accounts = state.activeAccounts,
-                        archivedAccounts = state.archivedAccounts,
-                        totalBalance = state.totalBalance,
-                        onAccountClick = { viewModel.onAccountClick(it) },
-                        onArchive = { viewModel.onArchiveAccount(it) },
-                        onAddAccount = { viewModel.onAddAccountClick() }
+    AnimatedStateContent(
+        targetState = uiState,
+        contentKey = { it::class }
+    ) { state ->
+        when (state) {
+            is AccountsUiState.Loading -> LoadingContent(Modifier.fillMaxSize())
+            is AccountsUiState.Error -> ErrorContent(state.message, Modifier.fillMaxSize())
+            is AccountsUiState.Success -> {
+                if (state.isEmpty) {
+                    EmptyAccountsContent(
+                        onAddAccount = { viewModel.onAddAccountClick() },
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refresh() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        AccountsList(
+                            accounts = state.activeAccounts,
+                            archivedAccounts = state.archivedAccounts,
+                            totalBalance = state.totalBalance,
+                            onAccountClick = { viewModel.onAccountClick(it) },
+                            onArchive = onArchiveWithUndo,
+                            onAddAccount = { viewModel.onAddAccountClick() }
+                        )
+                    }
                 }
             }
         }

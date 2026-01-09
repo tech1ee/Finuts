@@ -47,5 +47,8 @@ data class TransactionEntity(
     val updatedAt: Long,
     // Transfer fields: links two transactions for double-entry accounting
     val linkedTransactionId: String? = null,
-    val transferAccountId: String? = null
+    val transferAccountId: String? = null,
+    // AI categorization metadata (Tier 0-3 tracking)
+    val categorizationSource: String? = null,
+    val categorizationConfidence: Float? = null
 )

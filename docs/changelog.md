@@ -10,6 +10,227 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Project documentation structure
 - Notion integration setup
 
+## [2026-01-09] - Import Feature 100% Complete
+
+### Added
+- **AI Categorization Integration (Gap 2):**
+  - `MerchantDatabase`, `RuleBasedCategorizer` DI wiring in CoreModule
+  - `CategorizePendingTransactionsUseCase` injection into ImportTransactionsUseCase
+  - `ImportProgress.Categorizing` state now emitted during import
+  - Automatic category assignment for 100+ known Kazakhstan merchants
+  - Category preservation logic (existing categories not overwritten)
+  - 4 new TDD tests for categorization integration
+
+- **PDF/Image File Support (Gap 1):**
+  - File picker now shows: csv, ofx, qfx, qif, txt, pdf, jpg, jpeg, png, heic, heif
+  - Enables PDF statement import via PdfParser
+  - Enables receipt/image import via OCR (Tesseract4Android / Vision Framework)
+
+### Changed
+- `ImportTransactionsUseCase` now accepts 4th parameter: `categorizationUseCase`
+- `ImportViewModelTest` updated with categorization dependencies
+
+### Tests
+- 4 new categorization tests: progress emission, category assignment, preservation, null handling
+- All 860+ tests passing
+- Android build successful
+
+### Status
+- **Import Feature:** 100% complete (was 85%)
+- **Bank Import Phase 2:** READY for Iteration 15
+
+## [2026-01-09] - Import Audit & Task Sync
+
+### Added
+- **Comprehensive Import Feature Audit:**
+  - Architecture analysis: 23 files, 5-step wizard flow
+  - Code quality: All files < 200 lines, Clean Architecture compliance
+  - UX/UI audit: 5 screens analyzed with industry best practices
+  - Edge case analysis: 5 handled, 5 identified for future
+  - Accessibility audit: partial implementation identified
+
+- **Notion Task Sync (8 new tasks):**
+  - Bank Import Phase 2: Orchestrator & Duplicate Detection (ICE: 504)
+  - Transaction Search (basic filter) (ICE: 576)
+  - Android Release Preparation (ICE: 432)
+  - AI Insights System (spending analysis) (ICE: 336)
+  - iOS Release Preparation (ICE: 280)
+  - PDF/OCR Parsing Implementation (ICE: 210)
+  - Import UX/UI: Fix hardcoded step counter and progress (ICE: 432)
+  - Advanced Search Filters (date range, amount) (ICE: 240)
+
+- **Plan: Iteration 20 (PDF/OCR Parsing):**
+  - iOS: Vision Framework + PDFKit (supports Cyrillic)
+  - Android: Tesseract4Android (NOT ML Kit - no Cyrillic support)
+  - PdfTextExtractor, OcrService expect/actual pattern
+  - BankStatementParser for OCR text → transactions
+
+### Research
+- **ML Kit Cyrillic Support:** CRITICAL finding - ML Kit v2 does NOT support Cyrillic
+- **Tesseract4Android 4.9.0:** Recommended for Android OCR with rus.traineddata
+- **Apple Vision Framework:** Supports 18+ languages including Russian
+- **Import UX Best Practices:** 5-step wizard, color-coded validation, post-import tagging
+
+### Status
+- **Import Feature:** 85% complete (File Picker + Parsers + UI done)
+- **PDF/OCR:** Architecture designed, implementation pending
+- **Total Notion Tasks:** 46 for Finuts (38 existing + 8 new)
+
+## [2026-01-09] - Import Flow UX/UI Improvements (Iteration 19)
+
+### Added
+- **Dynamic Step Counter:**
+  - `ImportUiState.stepNumber` - computed property for current step (1-5)
+  - `ImportUiState.progressFraction` - computed property for progress bar
+  - `ImportUiState.stepCounterText` - formatted "N из 5" text
+
+- **Bulk Selection:**
+  - `BulkSelectionBar.kt` - new component with 3 actions
+  - `ImportViewModel.onSelectAll()` - select all transactions
+  - `ImportViewModel.onDeselectAll()` - clear selection
+  - `ImportViewModel.onDeselectDuplicates()` - remove duplicate indices
+
+- **Accessibility:**
+  - Progress bar semantics in ImportReviewScreen
+  - Progress bar semantics in ImportConfirmScreen
+
+- **Tests:**
+  - 9 new tests in ImportViewModelTest for bulk selection and step properties
+
+### Changed
+- `ImportReviewScreen` - uses dynamic step counter and progress
+- `ImportConfirmScreen` - uses dynamic step counter and progress
+- `ImportScreen` - passes new parameters to child screens
+- `ProcessingStepIndicator` - animation tuned: 600ms duration, 1.05 scale (more subtle)
+
+### Fixed
+- Hardcoded "3 из 5" replaced with dynamic `stepCounterText`
+- Hardcoded progress 0.6f/0.8f replaced with dynamic `progressFraction`
+- Animation pulse was too aggressive (1.15 scale) → now subtle (1.05 scale)
+
+### Milestone Progress
+- **Iteration 19**: Complete (Import UX/UI Improvements)
+- **Import Feature**: 85% complete (File Picker + Parsers + UI + Bulk Selection)
+- **Next**: PDF/OCR parsing or AI Insights (Iteration 16)
+
+## [2026-01-08] - Category Management UI (Iteration 13)
+
+### Added
+- **Empty States for Dashboard:**
+  - `EmptyStatePrompt` reusable component (feedback/EmptyStatePrompt.kt)
+  - MonthlyOverviewCard shows empty state when no budget set
+  - CategorySpendingList shows empty state when no transactions
+
+- **Category Management System:**
+  - `CategoryManagementScreen` - List with tabs (Expense/Income)
+  - `CategoryManagementViewModel` - Filters and separates default/custom categories
+  - `AddEditCategoryScreen` - Create/edit form with validation
+  - `AddEditCategoryViewModel` - Form state, validation, CRUD operations
+  - `EmojiPickerSheet` - Bottom sheet with 128 emojis in 8 categories
+  - `CategoryColorPalette` - 12 Tailwind-based preset colors
+
+- **Navigation:**
+  - Routes: `CategoryManagement`, `AddCategory(type)`, `EditCategory(categoryId)`
+  - Settings → "Categories" item in Data Management section
+  - Full navigation integration in AppNavigation.kt
+
+- **String Resources:**
+  - English and Russian translations for category management
+  - `data_management`, `categories`, `manage_categories`
+
+### Changed
+- DashboardViewModel: `monthlyBudget` now nullable (supports "no budget" state)
+- SettingsScreen: Added onNavigateToCategories callback
+
+### Milestone Progress
+- **Iteration 13**: Complete (Category UI)
+- **Next**: Iteration 14 (Category Testing)
+
+## [2026-01-08] - Category Testing (Iteration 14)
+
+### Added
+- **CategoryManagementViewModelTest (11 tests):**
+  - Initial state and loading tests
+  - Type selection (EXPENSE/INCOME filtering)
+  - Category separation (default vs custom)
+  - Sorting by sortOrder
+  - Delete operations
+  - Flow updates on repository changes
+
+- **AddEditCategoryViewModelTest (21 tests):**
+  - Create mode: initial state, defaults, type handling
+  - Edit mode: loading existing category data
+  - Form updates: name, icon, color, type
+  - Validation: empty name, name over 50 chars
+  - Save operations: create new, update existing, success events
+  - Delete operations: success, cannot delete default
+
+- **PageIndicatorTest (6 tests):**
+  - Page count validation
+  - Current page bounds clamping
+  - Single page handling
+
+- **EmptyStatePromptTest (6 tests):**
+  - Content validation
+  - Structure verification
+
+### Fixed
+- **TDD Compliance:** Resolved test gap from Iteration 13
+  - CategoryManagementViewModel: 0% → 80% coverage
+  - AddEditCategoryViewModel: 0% → 85% coverage
+
+### Milestone Progress
+- **Total Tests**: 855 (was 811, +44 new)
+- **Iteration 14**: Complete (Category Testing)
+- **Next**: Iteration 15 (Bank Import Phase 2)
+
+## [2026-01-06] - Bank Import Phase 1 Complete (Iteration 12)
+
+### Added
+- **Bank Import Domain Entities:**
+  - `DocumentType` sealed class: CSV, OFX, QIF, PDF, Image, Unknown
+  - `ImportSource` enum: RULE_BASED, MERCHANT_DATABASE, LLM_TIER1, LLM_TIER2, USER
+  - `ImportedTransaction` data class with confidence scores
+  - `ImportResult` sealed class: Success, Error, NeedsUserInput
+
+- **Utility Parsers (129 tests):**
+  - `NumberParser` - Locale-aware amount parsing (US, EU, RU/KZ, Indian formats)
+  - `DateParser` - Multi-format date parsing (ISO, EU, US, Russian, English)
+  - `FormatDetector` - Auto-detection of file types, bank signatures, encodings
+
+- **Document Parsers (54 tests):**
+  - `CsvParser` - CSV with column auto-detection (RU/EN headers)
+  - `OfxParser` - OFX/QFX format (SGML and XML)
+  - `QifParser` - QIF format (Bank, CCard types)
+
+- **Bank Signature Detection:**
+  - Kazakhstan: Kaspi, Halyk, Jusan, Forte, CenterCredit
+  - Russia: Sberbank, Tinkoff, Alfa, VTB, Raiffeisen
+
+### Milestone Progress
+- **Total Tests**: 811 (was 633, +178 new)
+- **Iteration 12**: Complete (Parsers phase)
+- **Bank Import**: 50% complete (orchestrator/UI pending)
+
+## [2026-01-05] - Bank Import Research & Planning
+
+### Research
+- **Universal Bank Import Architecture** (30+ sources):
+  - 4-tier processing: Format Detection → Rule-based → Native ML → Cloud LLM
+  - Document format analysis: CSV, OFX, QFX, QIF, PDF, Images
+  - Bank statement patterns for KZ and RU regions
+  - Duplicate detection strategies (hash, fuzzy matching)
+
+- **Multi-Purpose LLM Model Tiering**:
+  - Native AI: ML Kit (Android), Apple Intelligence (iOS)
+  - On-device: Gemma 270M (Tier 1), Gemma 1B (Tier 2)
+  - Cloud fallback: GPT-4o-mini, Claude Haiku
+
+### Plan Created
+- [calm-shimmying-hamming.md](~/.claude/plans/calm-shimmying-hamming.md)
+- Phase 1: Domain entities, utility parsers, document parsers
+- Phase 2: ImportOrchestrator, DuplicateDetector, UI
+
 ## [2026-01-04] - Notion Sync & iOS Fix
 
 ### Fixed
