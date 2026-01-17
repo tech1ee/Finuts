@@ -214,7 +214,7 @@ fun ImportReviewScreen(
                     key = { index, _ -> index }
                 ) { index, transaction ->
                     TransactionReviewItem(
-                        categoryEmoji = getCategoryEmoji(transaction.transaction.category),
+                        categoryId = transaction.transaction.category,
                         description = transaction.transaction.description,
                         date = formatDate(transaction.transaction.date),
                         amount = transaction.transaction.amount,
@@ -223,7 +223,8 @@ fun ImportReviewScreen(
                         isSelected = index in selectedIndices,
                         onSelectionChange = { selected ->
                             onTransactionToggle(index, selected)
-                        }
+                        },
+                        onCategoryClick = null // TODO: Add category picker callback
                     )
 
                     HorizontalDivider(
@@ -255,22 +256,6 @@ private fun getMatchInfo(status: DuplicateStatus): String? {
         is DuplicateStatus.ProbableDuplicate -> "Похож на существующую транзакцию"
         is DuplicateStatus.ExactDuplicate -> "Точная копия существующей транзакции"
         else -> null
-    }
-}
-
-/**
- * Get category emoji from category ID.
- */
-private fun getCategoryEmoji(categoryId: String?): String {
-    return when (categoryId) {
-        "food" -> "🍔"
-        "transport" -> "🚗"
-        "shopping" -> "🛒"
-        "entertainment" -> "🎮"
-        "health" -> "💊"
-        "utilities" -> "💡"
-        "income" -> "💰"
-        else -> "📦"
     }
 }
 

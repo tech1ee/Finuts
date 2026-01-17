@@ -18,6 +18,7 @@ import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsMoneyTypography
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
+import com.finuts.app.ui.utils.MoneyFormatter
 
 /**
  * Import Summary Card - Shows summary of import before confirmation.
@@ -43,6 +44,7 @@ fun ImportSummaryCard(
     totalExpenses: Long,
     totalIncome: Long,
     dateRange: String,
+    currencySymbol: String,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -61,7 +63,7 @@ fun ImportSummaryCard(
 
         SummaryRow(
             label = "Расходы",
-            value = formatMoney(totalExpenses),
+            value = MoneyFormatter.formatWithFraction(totalExpenses, currencySymbol),
             valueColor = FinutsColors.Expense
         )
 
@@ -69,7 +71,7 @@ fun ImportSummaryCard(
 
         SummaryRow(
             label = "Доходы",
-            value = formatMoney(totalIncome),
+            value = MoneyFormatter.formatWithFraction(totalIncome, currencySymbol),
             valueColor = FinutsColors.Income
         )
 
@@ -95,6 +97,7 @@ fun ImportSummaryCard(
 fun BalanceChangeCard(
     currentBalance: Long,
     newBalance: Long,
+    currencySymbol: String,
     modifier: Modifier = Modifier
 ) {
     val change = newBalance - currentBalance
@@ -108,7 +111,7 @@ fun BalanceChangeCard(
     ) {
         SummaryRow(
             label = "Было:",
-            value = formatMoney(currentBalance)
+            value = MoneyFormatter.formatWithFraction(currentBalance, currencySymbol)
         )
 
         Spacer(modifier = Modifier.height(FinutsSpacing.sm))
@@ -125,13 +128,13 @@ fun BalanceChangeCard(
 
             Row {
                 Text(
-                    text = formatMoney(newBalance),
+                    text = MoneyFormatter.formatWithFraction(newBalance, currencySymbol),
                     style = FinutsMoneyTypography.body,
                     color = FinutsColors.TextPrimary
                 )
 
                 Text(
-                    text = "  (${formatMoneyWithSign(change)})",
+                    text = "  (${MoneyFormatter.formatWithSign(kotlin.math.abs(change), currencySymbol, change >= 0)})",
                     style = FinutsMoneyTypography.label,
                     color = if (change >= 0) FinutsColors.Income else FinutsColors.Expense
                 )
@@ -167,30 +170,3 @@ private fun SummaryRow(
     }
 }
 
-/**
- * Format money value with currency symbol.
- */
-private fun formatMoney(amount: Long): String {
-    val formatted = formatNumber(kotlin.math.abs(amount))
-    return if (amount < 0) "-$formatted ₸" else "$formatted ₸"
-}
-
-/**
- * Format money value with explicit sign.
- */
-private fun formatMoneyWithSign(amount: Long): String {
-    val formatted = formatNumber(kotlin.math.abs(amount))
-    val sign = if (amount >= 0) "+" else "-"
-    return "$sign$formatted ₸"
-}
-
-/**
- * Format number with thousand separators.
- */
-private fun formatNumber(value: Long): String {
-    return value.toString()
-        .reversed()
-        .chunked(3)
-        .joinToString(",")
-        .reversed()
-}

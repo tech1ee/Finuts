@@ -84,11 +84,14 @@
 
     <!-- Common -->
     <string name="cancel">Отмена</string>
+    <string name="continue_action">Продолжить</string>
     <string name="save">Сохранить</string>
     <string name="delete">Удалить</string>
     <string name="edit">Редактировать</string>
     <string name="back">Назад</string>
     <string name="ok">ОК</string>
+    <string name="recommended">Рекомендуем</string>
+    <string name="download_failed">Ошибка загрузки</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Пропустить</string>
@@ -132,10 +135,51 @@
     <string name="no_accounts_for_transactions">Сначала создайте счёт</string>
     <string name="no_accounts_for_transactions_desc">Для добавления транзакций нужен хотя бы один счёт.</string>
 
+    <!-- Language Restart Dialog -->
+    <string name="language_restart_title">Требуется перезапуск</string>
+    <string name="language_restart_message">Язык изменится после перезапуска приложения.</string>
+    <string name="language_restart_button">Перезапустить</string>
+
     <!-- User Goals -->
     <string name="goal_not_set">Не выбрана</string>
     <string name="goal_track_spending">Узнать, куда уходят деньги</string>
     <string name="goal_save_money">Копить на цели</string>
     <string name="goal_get_organized">Навести порядок в финансах</string>
     <string name="goal_budget_better">Придерживаться бюджета</string>
+
+    <!-- AI Model Step (Onboarding) -->
+    <string name="ai_model_step_title">Умный помощник</string>
+    <string name="ai_model_step_description">Загрузите AI-модель для автоматической категоризации транзакций и персональных рекомендаций — всё обрабатывается на устройстве для приватности.</string>
+    <string name="ai_model_step_cta_download">Загрузить модель</string>
+    <string name="ai_model_step_cta_skip">Пропустить</string>
+    <string name="ai_model_step_download_later">Можно загрузить позже в Настройках</string>
+    <string name="ai_model_step_downloading">Загрузка…</string>
+    <string name="ai_model_step_verifying">Проверка…</string>
+    <string name="ai_model_step_ready">AI-модель готова!</string>
+    <string name="ai_model_step_error_retry">Попробовать снова</string>
+
+    <!-- AI Features (Settings) -->
+    <string name="ai_features">AI функции</string>
+    <string name="ai_model">AI модель</string>
+    <string name="ai_model_not_installed">Не установлена</string>
+    <string name="ai_categorization">Авто-категоризация</string>
+    <string name="ai_categorization_description">Автоматически категоризировать транзакции с помощью AI</string>
+    <string name="current_model">Текущая модель</string>
+    <string name="available_models">Доступные модели</string>
+    <string name="model_ready">Готова к использованию</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="download">Загрузить</string>
+    <string name="select">Выбрать</string>
+
+    <!-- Model Tiers -->
+    <string name="model_compact">Компактная</string>
+    <string name="model_compact_desc">Быстрая категоризация, минимум места</string>
+    <string name="model_standard">Стандартная</string>
+    <string name="model_standard_desc">Баланс скорости и точности</string>
+    <string name="model_pro">Продвинутая</string>
+    <string name="model_pro_desc">Лучшая точность, финансовые инсайты</string>
+
+    <!-- Coming Soon -->
+    <string name="ai_models_coming_soon">Скоро</string>
+    <string name="ai_models_coming_soon_description">AI-модели готовятся. Скоро здесь появится автоматическая категоризация транзакций и умная аналитика.</string>
 </resources>

@@ -69,7 +69,7 @@ class TransactionCategorizerTest {
     // --- Tier 0 Priority Tests ---
 
     @Test
-    fun `uses learned mapping when available (Tier 0)`() = runTest {
+    fun `uses learned mapping when available - Tier 0`() = runTest {
         val merchantRepo = FakeLearnedMerchantRepository()
         merchantRepo.merchants["MY COFFEE"] = LearnedMerchant(
             id = "lm-1",

@@ -1,25 +1,16 @@
 package com.finuts.app.feature.`import`
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import co.touchlab.kermit.Logger
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,12 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.finuts.app.feature.`import`.components.ImportAccountSelector
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
@@ -48,42 +38,11 @@ import com.finuts.app.ui.components.import.ImportSummaryCard
 import com.finuts.domain.entity.Account
 
 /**
- * Import Confirm Screen - Account selection and summary.
- *
- * Layout:
- * ┌─────────────────────────────────────────┐
- * │  ←  Подтверждение            4 из 5     │
- * │─────────────────────────────────────────│
- * │  ██████████████████████████████░░░░░░░  │
- * │                                         │
- * │  Счёт для импорта                       │
- * │  ┌─────────────────────────────────────┐│
- * │  │ 💳 Kaspi Gold                    ▼  ││
- * │  │    Текущий баланс: 125,000 ₸        ││
- * │  └─────────────────────────────────────┘│
- * │                                         │
- * │  ─────────────────────────────────────  │
- * │                                         │
- * │  Сводка импорта                         │
- * │  ┌─────────────────────────────────────┐│
- * │  │ Всего транзакций         35        ││
- * │  │ Расходы                  -87,500 ₸ ││
- * │  │ Доходы                   +12,000 ₸ ││
- * │  │ Период          10 янв - 15 янв    ││
- * │  └─────────────────────────────────────┘│
- * │                                         │
- * │  ─────────────────────────────────────  │
- * │                                         │
- * │  Изменение баланса                      │
- * │  ┌─────────────────────────────────────┐│
- * │  │ Было:    125,000 ₸                 ││
- * │  │ Станет:   49,500 ₸   (-75,500 ₸)   ││
- * │  └─────────────────────────────────────┘│
- * │                                         │
- * │─────────────────────────────────────────│
- * │  [ Импортировать 35 транзакций ]        │
- * └─────────────────────────────────────────┘
+ * Import Confirm Screen - Step 4 of import flow.
+ * Shows account selector, import summary, and balance change preview.
  */
+private val log = Logger.withTag("ImportConfirmScreen")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportConfirmScreen(
@@ -100,10 +59,16 @@ fun ImportConfirmScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    log.d { "RENDER: accounts=${accounts.size}, selectedAccountId=$selectedAccountId, txCount=$transactionCount" }
+    log.d { "RENDER: expenses=$totalExpenses, income=$totalIncome, dateRange=$dateRange" }
+
     val selectedAccount = accounts.find { it.id == selectedAccountId }
     val currentBalance = selectedAccount?.balance ?: 0L
     val netChange = totalIncome + totalExpenses
     val newBalance = currentBalance + netChange
+    val currencySymbol = selectedAccount?.currency?.symbol ?: accounts.firstOrNull()?.currency?.symbol ?: "₸"
+
+    log.d { "CALC: selectedAccount=${selectedAccount?.name}, currentBalance=$currentBalance, netChange=$netChange, newBalance=$newBalance, currency=$currencySymbol" }
 
     var showAccountDropdown by remember { mutableStateOf(false) }
 
@@ -139,7 +104,10 @@ fun ImportConfirmScreen(
                     .padding(FinutsSpacing.screenPadding)
             ) {
                 Button(
-                    onClick = onConfirm,
+                    onClick = {
+                        log.i { "BUTTON CLICKED: Import $transactionCount transactions, accountId=$selectedAccountId" }
+                        onConfirm()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FinutsSpacing.buttonHeight),
@@ -159,12 +127,7 @@ fun ImportConfirmScreen(
         containerColor = FinutsColors.Background,
         modifier = modifier
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Progress bar with accessibility
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             LinearProgressIndicator(
                 progress = { progressFraction },
                 modifier = Modifier
@@ -177,12 +140,7 @@ fun ImportConfirmScreen(
                 trackColor = FinutsColors.ProgressBackground
             )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(FinutsSpacing.screenPadding)
-            ) {
-                // Account selector
+            Column(modifier = Modifier.fillMaxSize().padding(FinutsSpacing.screenPadding)) {
                 Text(
                     text = "Счёт для импорта",
                     style = FinutsTypography.labelMedium,
@@ -191,7 +149,7 @@ fun ImportConfirmScreen(
 
                 Spacer(modifier = Modifier.height(FinutsSpacing.sm))
 
-                AccountSelector(
+                ImportAccountSelector(
                     selectedAccount = selectedAccount,
                     accounts = accounts,
                     expanded = showAccountDropdown,
@@ -207,8 +165,6 @@ fun ImportConfirmScreen(
                 HorizontalDivider(color = FinutsColors.Border)
 
                 Spacer(modifier = Modifier.height(FinutsSpacing.lg))
-
-                // Summary card
                 Text(
                     text = "Сводка импорта",
                     style = FinutsTypography.titleMedium,
@@ -221,7 +177,8 @@ fun ImportConfirmScreen(
                     totalTransactions = transactionCount,
                     totalExpenses = totalExpenses,
                     totalIncome = totalIncome,
-                    dateRange = dateRange
+                    dateRange = dateRange,
+                    currencySymbol = currencySymbol
                 )
 
                 Spacer(modifier = Modifier.height(FinutsSpacing.lg))
@@ -229,8 +186,6 @@ fun ImportConfirmScreen(
                 HorizontalDivider(color = FinutsColors.Border)
 
                 Spacer(modifier = Modifier.height(FinutsSpacing.lg))
-
-                // Balance change card
                 if (selectedAccount != null) {
                     Text(
                         text = "Изменение баланса",
@@ -242,7 +197,8 @@ fun ImportConfirmScreen(
 
                     BalanceChangeCard(
                         currentBalance = currentBalance,
-                        newBalance = newBalance
+                        newBalance = newBalance,
+                        currencySymbol = currencySymbol
                     )
                 }
             }
@@ -250,88 +206,3 @@ fun ImportConfirmScreen(
     }
 }
 
-@Composable
-private fun AccountSelector(
-    selectedAccount: Account?,
-    accounts: List<Account>,
-    expanded: Boolean,
-    onExpandChange: (Boolean) -> Unit,
-    onAccountSelect: (Account) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shape = RoundedCornerShape(12.dp)
-
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .clip(shape)
-                .background(FinutsColors.SurfaceVariant)
-                .border(1.dp, FinutsColors.Border, shape)
-                .clickable { onExpandChange(!expanded) }
-                .padding(FinutsSpacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = selectedAccount?.let { "💳 ${it.name}" } ?: "Выберите счёт",
-                    style = FinutsTypography.titleMedium,
-                    color = FinutsColors.TextPrimary
-                )
-
-                if (selectedAccount != null) {
-                    Text(
-                        text = "Текущий баланс: ${formatMoney(selectedAccount.balance)}",
-                        style = FinutsTypography.bodySmall,
-                        color = FinutsColors.TextSecondary
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Expand",
-                tint = FinutsColors.TextSecondary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandChange(false) }
-        ) {
-            accounts.forEach { account ->
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(
-                                text = "💳 ${account.name}",
-                                style = FinutsTypography.titleMedium
-                            )
-                            Text(
-                                text = formatMoney(account.balance),
-                                style = FinutsTypography.bodySmall,
-                                color = FinutsColors.TextSecondary
-                            )
-                        }
-                    },
-                    onClick = { onAccountSelect(account) }
-                )
-            }
-        }
-    }
-}
-
-/**
- * Format money value with currency symbol.
- */
-private fun formatMoney(amount: Long): String {
-    val formatted = kotlin.math.abs(amount).toString()
-        .reversed()
-        .chunked(3)
-        .joinToString(",")
-        .reversed()
-    return if (amount < 0) "-$formatted ₸" else "$formatted ₸"
-}

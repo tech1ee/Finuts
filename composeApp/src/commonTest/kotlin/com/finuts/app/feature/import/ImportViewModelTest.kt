@@ -6,9 +6,12 @@ import com.finuts.data.categorization.RuleBasedCategorizer
 import com.finuts.data.import.FuzzyDuplicateDetector
 import com.finuts.data.import.ImportFileProcessor
 import com.finuts.data.import.ImportValidator
+import com.finuts.data.import.FormatDetector
 import com.finuts.data.import.parsers.CsvParser
 import com.finuts.data.import.parsers.OfxParser
 import com.finuts.data.import.parsers.QifParser
+import com.finuts.data.import.utils.DateParser
+import com.finuts.data.import.utils.NumberParser
 import com.finuts.domain.entity.Account
 import com.finuts.domain.entity.AccountType
 import com.finuts.domain.entity.Currency
@@ -22,7 +25,10 @@ import com.finuts.domain.entity.import.ImportedTransaction
 import com.finuts.domain.repository.AccountRepository
 import com.finuts.domain.repository.TransactionRepository
 import com.finuts.domain.usecase.CategorizePendingTransactionsUseCase
+import com.finuts.domain.usecase.CategoryResolver
 import com.finuts.domain.usecase.ImportTransactionsUseCase
+import com.finuts.domain.registry.IconRegistry
+import com.finuts.app.test.fakes.FakeCategoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -69,16 +75,26 @@ class ImportViewModelTest {
             aiCategorizer = null
         )
 
+        val fakeCategoryRepository = FakeCategoryRepository()
+        val categoryResolver = CategoryResolver(
+            categoryRepository = fakeCategoryRepository,
+            iconRegistry = IconRegistry()
+        )
+
         importUseCase = ImportTransactionsUseCase(
             transactionRepository = fakeTransactionRepository,
             duplicateDetector = FuzzyDuplicateDetector(),
             validator = ImportValidator(),
-            categorizationUseCase = categorizationUseCase
+            categorizationUseCase = categorizationUseCase,
+            categoryResolver = categoryResolver
         )
+        val dateParser = DateParser()
+        val numberParser = NumberParser()
         fileProcessor = ImportFileProcessor(
-            csvParser = CsvParser(),
-            ofxParser = OfxParser(),
-            qifParser = QifParser()
+            formatDetector = FormatDetector(),
+            csvParser = CsvParser(dateParser, numberParser),
+            ofxParser = OfxParser(numberParser),
+            qifParser = QifParser(numberParser)
         )
         viewModel = ImportViewModel(
             importTransactionsUseCase = importUseCase,

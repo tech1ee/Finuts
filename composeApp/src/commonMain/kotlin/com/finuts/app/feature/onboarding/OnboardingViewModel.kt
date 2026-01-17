@@ -6,9 +6,12 @@ import com.finuts.domain.entity.Account
 import com.finuts.domain.entity.AccountType
 import com.finuts.domain.entity.Currency
 import com.finuts.domain.model.AppLanguage
+import com.finuts.domain.model.DownloadProgress
+import com.finuts.domain.model.ModelConfig
 import com.finuts.domain.model.OnboardingStep
 import com.finuts.domain.model.UserGoal
 import com.finuts.domain.repository.AccountRepository
+import com.finuts.domain.repository.ModelRepository
 import com.finuts.domain.repository.PreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,21 +23,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
+import co.touchlab.kermit.Logger
+import com.finuts.app.core.locale.appLocale
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
  * ViewModel for the onboarding flow.
- * Manages step navigation, goal selection, and inline account creation.
+ * Manages step navigation, goal selection, inline account creation, and AI model setup.
  *
  * @param coroutineScope Optional CoroutineScope for testing. Uses viewModelScope by default.
  */
 class OnboardingViewModel(
     private val preferencesRepository: PreferencesRepository,
     private val accountRepository: AccountRepository,
+    private val modelRepository: ModelRepository? = null,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
+    private val logger = Logger.withTag("OnboardingViewModel")
     private val scope: CoroutineScope = coroutineScope ?: viewModelScope
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -43,21 +50,69 @@ class OnboardingViewModel(
     private val _events = MutableSharedFlow<OnboardingEvent>()
     val events: SharedFlow<OnboardingEvent> = _events.asSharedFlow()
 
+    init {
+        println("=== DEBUG: OnboardingViewModel init, modelRepository=${modelRepository != null} ===")
+        logger.i { "OnboardingViewModel init, modelRepository=${modelRepository != null}" }
+
+        // Collect download progress from ModelRepository
+        modelRepository?.let { repo ->
+            scope.launch {
+                logger.d { "Starting to collect downloadProgress flow" }
+                repo.downloadProgress.collect { progress ->
+                    logger.d { "downloadProgress updated: $progress" }
+                    _uiState.update { it.copy(modelDownloadProgress = progress) }
+                }
+            }
+            // Load all available models and recommended model
+            scope.launch {
+                logger.i { "Loading available models..." }
+                try {
+                    val allModels = repo.availableModels.filter { it.downloadUrl.isNotBlank() }
+                    val recommended = repo.getRecommendedModel()
+                    logger.i { "Available models: ${allModels.size}, Recommended: ${recommended.id}" }
+                    _uiState.update {
+                        it.copy(
+                            availableModels = allModels,
+                            recommendedModelId = recommended.id,
+                            selectedModelId = recommended.id
+                        )
+                    }
+                } catch (e: Exception) {
+                    logger.e(e) { "Failed to load models" }
+                }
+            }
+        } ?: run {
+            logger.w { "ModelRepository is NULL - AI features disabled" }
+        }
+    }
+
     fun onNext() {
+        val currentStep = _uiState.value.currentStep
+        println("=== DEBUG: onNext() called, currentStep=$currentStep ===")
+        logger.i { "onNext() called, currentStep=$currentStep" }
+
         _uiState.update { state ->
             val nextStep = when (state.currentStep) {
                 OnboardingStep.Welcome -> OnboardingStep.CurrencyLanguage
                 OnboardingStep.CurrencyLanguage -> OnboardingStep.GoalSelection
                 OnboardingStep.GoalSelection -> OnboardingStep.FirstAccountSetup
-                OnboardingStep.FirstAccountSetup -> OnboardingStep.Completion
+                OnboardingStep.FirstAccountSetup -> OnboardingStep.AIModelSetup
+                OnboardingStep.AIModelSetup -> OnboardingStep.Completion
                 OnboardingStep.Completion -> OnboardingStep.Completion
             }
+            logger.i { "onNext() transitioning: $currentStep -> $nextStep" }
             state.copy(
                 currentStep = nextStep,
-                canSkip = nextStep !in listOf(OnboardingStep.Welcome, OnboardingStep.Completion),
+                canSkip = nextStep !in listOf(
+                    OnboardingStep.Welcome,
+                    OnboardingStep.Completion
+                ),
                 progressPercent = calculateProgress(nextStep)
             )
         }
+
+        println("=== DEBUG: onNext() done, new step=${_uiState.value.currentStep}, index=${_uiState.value.currentStepIndex} ===")
+        logger.i { "onNext() done, new currentStepIndex=${_uiState.value.currentStepIndex}" }
     }
 
     fun onBack() {
@@ -67,11 +122,15 @@ class OnboardingViewModel(
                 OnboardingStep.CurrencyLanguage -> OnboardingStep.Welcome
                 OnboardingStep.GoalSelection -> OnboardingStep.CurrencyLanguage
                 OnboardingStep.FirstAccountSetup -> OnboardingStep.GoalSelection
-                OnboardingStep.Completion -> OnboardingStep.FirstAccountSetup
+                OnboardingStep.AIModelSetup -> OnboardingStep.FirstAccountSetup
+                OnboardingStep.Completion -> OnboardingStep.AIModelSetup
             }
             state.copy(
                 currentStep = previousStep,
-                canSkip = previousStep !in listOf(OnboardingStep.Welcome, OnboardingStep.Completion),
+                canSkip = previousStep !in listOf(
+                    OnboardingStep.Welcome,
+                    OnboardingStep.Completion
+                ),
                 progressPercent = calculateProgress(previousStep)
             )
         }
@@ -79,14 +138,20 @@ class OnboardingViewModel(
 
     /**
      * Set step by index for HorizontalPager integration.
-     * Index mapping: 0=Welcome, 1=CurrencyLanguage, 2=GoalSelection, 3=FirstAccountSetup, 4=Completion
+     * Index mapping: 0=Welcome, 1=CurrencyLanguage, 2=GoalSelection,
+     * 3=FirstAccountSetup, 4=AIModelSetup, 5=Completion
      */
     fun setStep(index: Int) {
+        logger.i { "setStep($index) called" }
         val step = indexToStep(index) ?: return
+        logger.i { "setStep: index $index -> step $step" }
         _uiState.update { state ->
             state.copy(
                 currentStep = step,
-                canSkip = step !in listOf(OnboardingStep.Welcome, OnboardingStep.Completion),
+                canSkip = step !in listOf(
+                    OnboardingStep.Welcome,
+                    OnboardingStep.Completion
+                ),
                 progressPercent = calculateProgress(step)
             )
         }
@@ -97,7 +162,8 @@ class OnboardingViewModel(
         1 -> OnboardingStep.CurrencyLanguage
         2 -> OnboardingStep.GoalSelection
         3 -> OnboardingStep.FirstAccountSetup
-        4 -> OnboardingStep.Completion
+        4 -> OnboardingStep.AIModelSetup
+        5 -> OnboardingStep.Completion
         else -> null
     }
 
@@ -107,7 +173,37 @@ class OnboardingViewModel(
     }
 
     fun selectLanguage(language: AppLanguage) {
+        val currentLanguage = _uiState.value.selectedLanguage
+        if (language == currentLanguage) return
+
+        // Update UI state
         _uiState.update { it.copy(selectedLanguage = language) }
+
+        // Apply language change immediately
+        // On Android: LocalConfiguration update triggers recomposition
+        // On iOS: NSUserDefaults saved, takes effect on restart
+        appLocale = language.toLocaleCode()
+
+        // Save preference
+        scope.launch {
+            preferencesRepository.setLanguage(language)
+        }
+
+        // Reset onboarding to Welcome step for a fresh start
+        _uiState.update { state ->
+            state.copy(
+                currentStep = OnboardingStep.Welcome,
+                canSkip = false,
+                progressPercent = 0f
+            )
+        }
+    }
+
+    private fun AppLanguage.toLocaleCode(): String = when (this) {
+        AppLanguage.ENGLISH -> "en"
+        AppLanguage.RUSSIAN -> "ru"
+        AppLanguage.KAZAKH -> "kk"
+        AppLanguage.SYSTEM -> com.finuts.app.core.locale.getDefaultLocale()
     }
 
     // Goal selection (multiple)
@@ -143,6 +239,7 @@ class OnboardingViewModel(
     // Create account inline
     @OptIn(ExperimentalUuidApi::class)
     fun createAccount() {
+        logger.i { "createAccount() called" }
         val state = _uiState.value
 
         // Validate
@@ -191,7 +288,8 @@ class OnboardingViewModel(
                         createdAccountName = account.name
                     )
                 }
-                onNext() // Move to Completion
+                logger.i { "Account created successfully: ${account.name}, calling onNext()" }
+                onNext() // Move to AIModelSetup
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -204,7 +302,9 @@ class OnboardingViewModel(
     }
 
     fun skipAccountCreation() {
-        onNext() // Move to Completion without creating account
+        println("=== DEBUG: skipAccountCreation() called ===")
+        logger.i { "skipAccountCreation() called" }
+        onNext() // Move to AIModelSetup without creating account
     }
 
     fun onSkip() {
@@ -233,10 +333,87 @@ class OnboardingViewModel(
 
     private fun calculateProgress(step: OnboardingStep): Float = when (step) {
         OnboardingStep.Welcome -> 0f
-        OnboardingStep.CurrencyLanguage -> 0.25f
-        OnboardingStep.GoalSelection -> 0.50f
-        OnboardingStep.FirstAccountSetup -> 0.75f
+        OnboardingStep.CurrencyLanguage -> 0.2f
+        OnboardingStep.GoalSelection -> 0.4f
+        OnboardingStep.FirstAccountSetup -> 0.6f
+        OnboardingStep.AIModelSetup -> 0.8f
         OnboardingStep.Completion -> 1f
+    }
+
+    // AI Model functions
+    fun selectModelId(modelId: String) {
+        logger.d { "selectModelId: $modelId" }
+        _uiState.update { it.copy(selectedModelId = modelId) }
+    }
+
+    fun downloadModel() {
+        val modelId = _uiState.value.selectedModelId
+        logger.i { "downloadModel() called, selectedModelId=$modelId" }
+
+        if (modelId == null) {
+            logger.w { "downloadModel() aborted - no model selected" }
+            return
+        }
+
+        if (modelRepository == null) {
+            logger.e { "downloadModel() failed - modelRepository is NULL" }
+            return
+        }
+
+        scope.launch {
+            logger.i { "Calling modelRepository.downloadModel($modelId)" }
+            try {
+                val result = modelRepository.downloadModel(modelId)
+                logger.i { "downloadModel result: isSuccess=${result.isSuccess}" }
+                if (result.isFailure) {
+                    logger.e { "downloadModel failed: ${result.exceptionOrNull()?.message}" }
+                }
+            } catch (e: Exception) {
+                logger.e(e) { "downloadModel threw exception" }
+            }
+        }
+    }
+
+    fun cancelModelDownload() {
+        logger.i { "cancelModelDownload() called" }
+        modelRepository?.cancelDownload()
+    }
+
+    fun skipModelDownload() {
+        logger.i { "skipModelDownload() called" }
+        _uiState.update { it.copy(skipAIModel = true) }
+        onNext()
+    }
+
+    fun onModelDownloadComplete() {
+        val currentSelectedModelId = _uiState.value.selectedModelId
+        logger.i { "onModelDownloadComplete() called, selectedModelId=$currentSelectedModelId" }
+
+        if (currentSelectedModelId == null) {
+            logger.e { "ERROR: selectedModelId is null in onModelDownloadComplete!" }
+            onNext()
+            return
+        }
+
+        scope.launch {
+            logger.i { "Saving and selecting model: $currentSelectedModelId" }
+            preferencesRepository.setSelectedModelId(currentSelectedModelId)
+            preferencesRepository.setAIModelDownloadedInOnboarding(true)
+
+            // FIX BUG #1: Actually select the model in repository
+            // This updates ModelRepository.currentModel so OnDeviceLLMProvider.isAvailable() returns true
+            val selectResult = modelRepository?.selectModel(currentSelectedModelId)
+            if (selectResult == null) {
+                logger.e { "modelRepository is null, cannot select model" }
+            } else {
+                selectResult.onFailure { e ->
+                    logger.e(e) { "Failed to select model $currentSelectedModelId after download" }
+                }.onSuccess {
+                    logger.i { "Model $currentSelectedModelId selected successfully in repository" }
+                }
+            }
+        }
+        onNext()
     }
 
     private fun getCurrencyForCode(code: String): Currency = when (code) {
@@ -268,7 +445,13 @@ data class OnboardingUiState(
     val balanceError: String? = null,
     val isCreatingAccount: Boolean = false,
     val createdAccountId: String? = null,
-    val createdAccountName: String? = null
+    val createdAccountName: String? = null,
+    // AI Model
+    val availableModels: List<ModelConfig> = emptyList(),
+    val recommendedModelId: String? = null,
+    val selectedModelId: String? = null,
+    val modelDownloadProgress: DownloadProgress = DownloadProgress.Idle,
+    val skipAIModel: Boolean = false
 ) {
     /** Current step as index for HorizontalPager. */
     val currentStepIndex: Int
@@ -277,7 +460,8 @@ data class OnboardingUiState(
             OnboardingStep.CurrencyLanguage -> 1
             OnboardingStep.GoalSelection -> 2
             OnboardingStep.FirstAccountSetup -> 3
-            OnboardingStep.Completion -> 4
+            OnboardingStep.AIModelSetup -> 4
+            OnboardingStep.Completion -> 5
         }
 
     @Deprecated("Use selectedGoals for multiple selection")
@@ -285,7 +469,7 @@ data class OnboardingUiState(
         get() = selectedGoals.firstOrNull() ?: UserGoal.NOT_SET
 
     companion object {
-        const val TOTAL_STEPS = 5
+        const val TOTAL_STEPS = 6
     }
 }
 

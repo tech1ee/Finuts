@@ -22,5 +22,10 @@ interface PreferencesRepository {
     suspend fun setOnboardingCompleted(completed: Boolean)
     suspend fun setUserGoal(goal: UserGoal)
 
+    // AI-related methods
+    suspend fun setAICategorizationEnabled(enabled: Boolean)
+    suspend fun setSelectedModelId(modelId: String?)
+    suspend fun setAIModelDownloadedInOnboarding(downloaded: Boolean)
+
     suspend fun clearAll()
 }

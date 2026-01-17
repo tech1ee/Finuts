@@ -10,7 +10,7 @@ package com.finuts.data.import.utils
  *
  * All amounts are returned as Long in minor units (cents/kopecks).
  */
-object NumberParser {
+class NumberParser : NumberParserInterface {
 
     private val CURRENCY_SYMBOLS = setOf(
         '$', '€', '£', '¥', '₽', '₸', '₴', '₾', '₼', '₿',
@@ -33,7 +33,7 @@ object NumberParser {
      * @return Amount in minor units (e.g., cents)
      * @throws NumberParseException if the string cannot be parsed
      */
-    fun parse(text: String, locale: NumberLocale = NumberLocale.AUTO): Long {
+    override fun parse(text: String, locale: NumberLocale): Long {
         val cleaned = cleanInput(text)
 
         if (cleaned.isEmpty()) {
@@ -55,7 +55,7 @@ object NumberParser {
      * @param text Sample number string
      * @return Detected locale (defaults to US if ambiguous)
      */
-    fun detectLocale(text: String): NumberLocale {
+    override fun detectLocale(text: String): NumberLocale {
         val cleaned = cleanInput(text)
 
         // Check for space as thousands separator (RU_KZ)

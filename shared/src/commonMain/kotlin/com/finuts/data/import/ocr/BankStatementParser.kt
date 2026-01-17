@@ -1,9 +1,10 @@
 package com.finuts.data.import.ocr
 
+import co.touchlab.kermit.Logger
 import com.finuts.data.import.utils.DateFormat
-import com.finuts.data.import.utils.DateParser
+import com.finuts.data.import.utils.DateParserInterface
 import com.finuts.data.import.utils.NumberLocale
-import com.finuts.data.import.utils.NumberParser
+import com.finuts.data.import.utils.NumberParserInterface
 import com.finuts.domain.entity.import.ImportSource
 import com.finuts.domain.entity.import.ImportedTransaction
 import kotlinx.datetime.LocalDate
@@ -15,23 +16,34 @@ import kotlinx.datetime.LocalDate
  * from various bank statement formats. Supports Russian and English text,
  * multiple date formats, and various number formats.
  */
-class BankStatementParser {
+class BankStatementParser(
+    private val dateParser: DateParserInterface,
+    private val numberParser: NumberParserInterface
+) {
+    private val log = Logger.withTag("BankStatementParser")
 
     companion object {
         private const val BASE_CONFIDENCE = 0.7f
         private const val PAGE_BREAK_MARKER = "--- Page Break ---"
+        // Currency: any 1-5 non-digit, non-whitespace chars (₸, $, €, USD, RUB, тг, etc.)
+        // Completely language/currency agnostic - matches any symbol or short code
+        private const val CURRENCY = """[^\d\s]{1,5}"""
     }
 
     // Regex patterns for transaction detection
+    // All patterns are currency-agnostic: currency symbol is optional
     private val transactionPatterns = listOf(
-        // Pattern 1: DD.MM.YYYY Description Amount (with optional balance suffix)
-        Regex("""(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*₸?(?:\s+[ОоOo]статок.*)?$"""),
-        // Pattern 2: YYYY-MM-DD Description Amount (with optional balance suffix)
-        Regex("""(\d{4}-\d{1,2}-\d{1,2})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*₸?(?:\s+[ОоOo]статок.*)?$"""),
-        // Pattern 3: Russian text date (15 января 2026)
-        Regex("""(\d{1,2}\s+\p{L}+\s+\d{4})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*₸?(?:\s+[ОоOo]статок.*)?$"""),
-        // Pattern 4: Amount at start (for some formats)
-        Regex("""([+-]?\d[\d\s,.']*)\s*₸?\s+(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s+(.+)$""")
+        // Pattern 1: Date [+-] Amount [Currency] Description
+        // Examples: "21.12.25 - 1 100,00 T Покупка", "21.12.25 + 5000 USD Income"
+        Regex("""(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s+([+-])\s*(\d[\d\s,.']*)\s+(?:$CURRENCY\s+)?(.+)$"""),
+        // Pattern 2: Date Description Amount [Currency] [Balance]
+        Regex("""(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*(?:$CURRENCY)?(?:\s+.{0,10}[Bb]alance.*|\s+.{0,10}[Оо]статок.*)?$"""),
+        // Pattern 3: ISO Date (YYYY-MM-DD) Description Amount [Currency] [Balance]
+        Regex("""(\d{4}-\d{1,2}-\d{1,2})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*(?:$CURRENCY)?(?:\s+.{0,10}[Bb]alance.*|\s+.{0,10}[Оо]статок.*)?$"""),
+        // Pattern 4: Text date (15 января 2026 / 15 Jan 2026) Description Amount [Balance]
+        Regex("""(\d{1,2}\s+\p{L}+\s+\d{4})\s+(.+?)\s+([+-]?\d[\d\s,.']*)\s*(?:$CURRENCY)?(?:\s+.{0,10}[Bb]alance.*|\s+.{0,10}[Оо]статок.*)?$"""),
+        // Pattern 5: Amount Date Description (reversed format)
+        Regex("""([+-]?\d[\d\s,.']*)\s*(?:$CURRENCY)?\s+(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s+(.+)$""")
     )
 
     /**
@@ -42,28 +54,34 @@ class BankStatementParser {
      * @return List of parsed transactions
      */
     fun parseText(text: String, bankSignature: String?): List<ImportedTransaction> {
+        log.d { "parseText: Starting, textLength=${text.length}, bankSignature=$bankSignature" }
+
         val lines = text
             .lines()
             .filter { it.isNotBlank() }
             .filter { it != PAGE_BREAK_MARKER }
 
+        log.d { "parseText: Processing ${lines.size} non-empty lines" }
+
         val transactions = mutableListOf<ImportedTransaction>()
 
-        for (line in lines) {
-            val transaction = parseLine(line.trim())
+        for ((index, line) in lines.withIndex()) {
+            val transaction = parseLine(line.trim(), index)
             if (transaction != null) {
                 transactions.add(transaction)
             }
         }
 
+        log.i { "parseText: Completed, found ${transactions.size} transactions" }
         return transactions
     }
 
-    private fun parseLine(line: String): ImportedTransaction? {
+    private fun parseLine(line: String, lineIndex: Int = -1): ImportedTransaction? {
         // Try each pattern
-        for (pattern in transactionPatterns) {
+        for ((patternIndex, pattern) in transactionPatterns.withIndex()) {
             val match = pattern.find(line)
             if (match != null) {
+                // Note: Removed verbose logging - was blocking iOS logging system
                 return parseMatch(match, line)
             }
         }
@@ -99,14 +117,22 @@ class BankStatementParser {
     }
 
     private fun extractGroups(groups: List<String>): Triple<String, String, String> {
-        // Groups: [0] = full match, [1], [2], [3] = captured groups
+        // Groups: [0] = full match, [1], [2], [3], [4]? = captured groups
         val g1 = groups.getOrElse(1) { "" }
         val g2 = groups.getOrElse(2) { "" }
         val g3 = groups.getOrElse(3) { "" }
+        val g4 = groups.getOrElse(4) { "" }
 
-        // Detect if g1 is amount (Pattern 4) or date
-        return if (g1.startsWith('+') || g1.startsWith('-') || g1.first().isDigit() && g1.contains('.') && !g1.contains('/')) {
-            // Pattern 4: Amount, Date, Description
+        // Pattern 1 (Kaspi): Date, Sign, Amount, Description (4 groups)
+        if (g4.isNotEmpty() && (g2 == "+" || g2 == "-")) {
+            val signedAmount = g2 + g3
+            return Triple(g1, g4, signedAmount)
+        }
+
+        // Detect if g1 is amount (Pattern 5) or date
+        return if (g1.isNotEmpty() && (g1.startsWith('+') || g1.startsWith('-') ||
+                   (g1.first().isDigit() && g1.contains('.') && !g1.contains('/')))) {
+            // Pattern 5: Amount, Date, Description
             if (parseDate(g2) != null) {
                 Triple(g2, g3, g1)
             } else {
@@ -120,7 +146,7 @@ class BankStatementParser {
 
     private fun parseDate(dateStr: String): LocalDate? {
         return try {
-            DateParser.parseOrNull(dateStr.trim(), DateFormat.AUTO)
+            dateParser.parseOrNull(dateStr.trim(), DateFormat.AUTO)
         } catch (e: Exception) {
             null
         }
@@ -128,12 +154,13 @@ class BankStatementParser {
 
     private fun parseAmount(amountStr: String): Long? {
         return try {
+            // Remove any non-numeric characters except: digits, spaces, commas, dots, signs
             val cleaned = amountStr
-                .replace("₸", "")
-                .replace(Regex("[\\s']"), " ")
+                .replace(Regex("[^\\d\\s,.'+-]"), "")
+                .replace(Regex("[\\s']+"), " ")
                 .trim()
 
-            NumberParser.parse(cleaned, NumberLocale.AUTO)
+            numberParser.parse(cleaned, NumberLocale.AUTO)
         } catch (e: Exception) {
             null
         }

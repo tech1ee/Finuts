@@ -1,7 +1,7 @@
 package com.finuts.app.feature.categories
 
 import androidx.lifecycle.viewModelScope
-import com.finuts.app.feature.categories.components.CategoryColors
+import com.finuts.domain.registry.IconRegistry
 import com.finuts.app.presentation.base.BaseViewModel
 import com.finuts.domain.entity.Category
 import com.finuts.domain.entity.CategoryType
@@ -136,8 +136,8 @@ class AddEditCategoryViewModel(
 data class CategoryFormState(
     val id: String? = null,
     val name: String = "",
-    val icon: String = "📦",
-    val color: String = CategoryColors.first(),
+    val icon: String = "package",
+    val color: String = IconRegistry().colorPalette.first(),
     val type: CategoryType = CategoryType.EXPENSE,
     val isDefault: Boolean = false,
     val nameError: String? = null,

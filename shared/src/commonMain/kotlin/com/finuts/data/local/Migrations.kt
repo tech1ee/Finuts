@@ -104,6 +104,114 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
 }
 
 /**
+ * Migration 5 → 6: Database encryption enabled
+ *
+ * This migration is a version marker only - no SQL changes needed.
+ * Encryption is handled at the file level by:
+ * - Android: SQLCipher with keys from AndroidKeyStore
+ * - iOS: iOS Data Protection (NSFileProtectionComplete)
+ *
+ * Existing data is migrated via EncryptionMigrationManager before
+ * Room opens the database.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(connection: SQLiteConnection) {
+        // No SQL changes - encryption is handled at file level
+        // This migration exists to track that encryption has been enabled
+    }
+}
+
+/**
+ * Migration 6 → 7: Seed default categories for AI categorization
+ *
+ * This migration ensures all default categories exist in the database.
+ * These categories are required for:
+ * - MerchantDatabase patterns (Tier 1 categorization)
+ * - RuleBasedCategorizer patterns
+ * - TransactionCategorizer fallbacks
+ *
+ * Uses INSERT OR IGNORE to avoid duplicates if categories already exist.
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(connection: SQLiteConnection) {
+        // Expense categories - IDs must match MerchantDatabase patterns
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('groceries', 'Groceries', 'shopping_cart', '#4CAF50', 'EXPENSE', NULL, 1, 1)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('food_delivery', 'Food Delivery', 'delivery_dining', '#8BC34A', 'EXPENSE', NULL, 1, 2)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('transport', 'Transport', 'directions_car', '#2196F3', 'EXPENSE', NULL, 1, 3)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('shopping', 'Shopping', 'shopping_bag', '#9C27B0', 'EXPENSE', NULL, 1, 4)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('utilities', 'Utilities', 'power', '#FF9800', 'EXPENSE', NULL, 1, 5)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('healthcare', 'Healthcare', 'medical_services', '#F44336', 'EXPENSE', NULL, 1, 6)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('entertainment', 'Entertainment', 'sports_esports', '#E91E63', 'EXPENSE', NULL, 1, 7)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('education', 'Education', 'school', '#3F51B5', 'EXPENSE', NULL, 1, 8)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('housing', 'Housing', 'home', '#795548', 'EXPENSE', NULL, 1, 9)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('transfer', 'Transfers', 'swap_horiz', '#607D8B', 'EXPENSE', NULL, 1, 10)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('other', 'Other', 'more_horiz', '#9E9E9E', 'EXPENSE', NULL, 1, 11)"""
+        )
+
+        // Income categories
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('salary', 'Salary', 'work', '#4CAF50', 'INCOME', NULL, 1, 12)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('freelance', 'Freelance', 'computer', '#00BCD4', 'INCOME', NULL, 1, 13)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('investments', 'Investments', 'trending_up', '#8BC34A', 'INCOME', NULL, 1, 14)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('gifts', 'Gifts', 'card_giftcard', '#FF5722', 'INCOME', NULL, 1, 15)"""
+        )
+        connection.execSQL(
+            """INSERT OR IGNORE INTO categories (id, name, icon, color, type, parentId, isDefault, sortOrder)
+               VALUES ('other_income', 'Other Income', 'attach_money', '#607D8B', 'INCOME', NULL, 1, 16)"""
+        )
+    }
+}
+
+/**
  * All migrations in order.
  */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val ALL_MIGRATIONS = arrayOf(
+    MIGRATION_1_2,
+    MIGRATION_2_3,
+    MIGRATION_3_4,
+    MIGRATION_4_5,
+    MIGRATION_5_6,
+    MIGRATION_6_7
+)

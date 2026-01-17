@@ -5,6 +5,7 @@ import com.finuts.data.repository.BudgetRepositoryImpl
 import com.finuts.data.repository.CategoryCorrectionRepositoryImpl
 import com.finuts.data.repository.CategoryRepositoryImpl
 import com.finuts.data.repository.LearnedMerchantRepositoryImpl
+import com.finuts.data.repository.ModelRepositoryImpl
 import com.finuts.data.repository.PreferencesRepositoryImpl
 import com.finuts.data.repository.TransactionRepositoryImpl
 import com.finuts.domain.repository.AccountRepository
@@ -12,6 +13,7 @@ import com.finuts.domain.repository.BudgetRepository
 import com.finuts.domain.repository.CategoryCorrectionRepository
 import com.finuts.domain.repository.CategoryRepository
 import com.finuts.domain.repository.LearnedMerchantRepository
+import com.finuts.domain.repository.ModelRepository
 import com.finuts.domain.repository.PreferencesRepository
 import com.finuts.domain.repository.TransactionRepository
 import org.koin.core.module.Module
@@ -24,5 +26,6 @@ val repositoryModule: Module = module {
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<CategoryCorrectionRepository> { CategoryCorrectionRepositoryImpl(get()) }
-    single<LearnedMerchantRepository> { LearnedMerchantRepositoryImpl(get()) }
+    single<LearnedMerchantRepository> { LearnedMerchantRepositoryImpl(get(), get()) }
+    single<ModelRepository> { ModelRepositoryImpl(get(), get()) }
 }

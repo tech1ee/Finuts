@@ -74,46 +74,75 @@ fun CategoryIcon(
  * - Lowercase: "food", "transport"
  * - With underscores: "food_dining", "health_medical"
  * - Database IDs: matches partial strings
+ * - IconRegistry keys: "basket", "coffee", "pizza", etc.
  */
 fun getCategoryIcon(key: String): ImageVector {
     return when (key.lowercase()) {
         // Food & Dining
-        "food", "food_dining", "restaurant", "dining" -> FinutsIcons.Food
-        "groceries", "grocery", "supermarket", "market" -> FinutsIcons.Groceries
-        "coffee", "cafe", "drinks" -> FinutsIcons.Coffee
+        "food", "food_dining", "restaurant", "dining", "tools_kitchen" -> FinutsIcons.Food
+        "groceries", "grocery", "supermarket", "market", "basket" -> FinutsIcons.Groceries
+        "coffee", "cafe", "drinks", "mug" -> FinutsIcons.Coffee
+        "pizza" -> FinutsIcons.Restaurant
+        "truck_delivery", "food_delivery" -> FinutsIcons.Food
 
         // Transport
         "transport", "transportation", "car", "auto", "vehicle" -> FinutsIcons.Transport
-        "travel", "vacation", "trip", "flight" -> FinutsIcons.Travel
+        "travel", "vacation", "trip", "flight", "plane" -> FinutsIcons.Travel
+        "bus", "gas_station", "taxi" -> FinutsIcons.Transport
 
         // Shopping
-        "shopping", "shop", "retail", "clothes", "clothing" -> FinutsIcons.Shopping
+        "shopping", "shop", "retail", "clothes", "clothing", "shopping_cart" -> FinutsIcons.Shopping
+        "shirt", "bag" -> FinutsIcons.Shopping
+        "device_mobile" -> FinutsIcons.Other
 
         // Bills & Utilities
-        "utilities", "utility", "bills", "bill" -> FinutsIcons.Utilities
+        "utilities", "utility", "bills", "bill", "bolt" -> FinutsIcons.Utilities
+        "droplet", "wifi", "phone", "flame" -> FinutsIcons.Utilities
         "rent", "housing", "home", "mortgage" -> FinutsIcons.Rent
-        "insurance" -> FinutsIcons.Insurance
-        "subscriptions", "subscription", "recurring" -> FinutsIcons.Subscriptions
+        "insurance", "shield" -> FinutsIcons.Insurance
+        "subscriptions", "subscription", "recurring", "repeat" -> FinutsIcons.Subscriptions
 
         // Entertainment & Lifestyle
-        "entertainment", "fun", "leisure", "movies" -> FinutsIcons.Entertainment
-        "fitness", "gym", "sports", "exercise" -> FinutsIcons.Fitness
+        "entertainment", "fun", "leisure", "movies", "movie" -> FinutsIcons.Entertainment
+        "music", "gamepad", "ticket", "device_tv" -> FinutsIcons.Entertainment
+        "fitness", "gym", "sports", "exercise", "run", "activity" -> FinutsIcons.Fitness
 
         // Health & Education
-        "health", "medical", "healthcare", "doctor", "pharmacy" -> FinutsIcons.Health
+        "health", "medical", "healthcare", "doctor", "pharmacy", "heart" -> FinutsIcons.Health
+        "pill", "stethoscope" -> FinutsIcons.Health
         "education", "school", "learning", "courses", "books" -> FinutsIcons.Education
+        "book", "certificate", "bulb", "pencil" -> FinutsIcons.Education
+
+        // Housing
+        "building", "key", "tool", "sofa" -> FinutsIcons.Rent
+
+        // Personal
+        "scissors", "sparkles", "user" -> FinutsIcons.Other
 
         // Income & Work
-        "salary", "income", "work", "paycheck", "wages" -> FinutsIcons.Salary
+        "salary", "income", "work", "paycheck", "wages", "briefcase" -> FinutsIcons.Salary
+        "laptop", "freelance" -> FinutsIcons.Salary
         "gift", "gifts", "presents" -> FinutsIcons.Gift
 
         // Financial
-        "investment", "investments", "stocks", "crypto" -> FinutsIcons.Investment
-        "savings", "saving" -> FinutsIcons.Savings
-        "transfer", "transfers" -> FinutsIcons.Transfer
+        "investment", "investments", "stocks", "crypto", "trending_up" -> FinutsIcons.Investment
+        "savings", "saving", "coin" -> FinutsIcons.Savings
+        "transfer", "transfers", "arrows_left_right" -> FinutsIcons.Transfer
+        "credit_card", "card" -> FinutsIcons.Card
+        "wallet" -> FinutsIcons.Wallet
+        "cash" -> FinutsIcons.Cash
+        "rotate_ccw" -> FinutsIcons.Transfer
+        "plus" -> FinutsIcons.Add
 
-        // Default
-        "other", "misc", "miscellaneous" -> FinutsIcons.Other
+        // Time-related
+        "calendar" -> FinutsIcons.Calendar
+        "clock" -> FinutsIcons.Clock
+
+        // Other
+        "other", "misc", "miscellaneous", "package" -> FinutsIcons.Other
+        "tag" -> FinutsIcons.Tag
+        "star", "flag", "circle" -> FinutsIcons.Other
+
         else -> FinutsIcons.Other
     }
 }

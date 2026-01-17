@@ -7,49 +7,45 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.finuts.app.feature.dashboard.utils.hexToColor
-import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
+import com.finuts.domain.registry.IconRegistry
 
 /**
- * Category Color Palette - 12 preset colors
+ * Category Color Palette - 15 preset colors from IconRegistry
  *
- * Layout (Tailwind-based colors):
+ * Layout:
  * ┌─────────────────────────────────────────┐
- * │  ● ● ● ● ● ●                           │
- * │  ● ● ● ● ● ●                           │
+ * │  ● ● ● ● ●                              │
+ * │  ● ● ● ● ●                              │
+ * │  ● ● ● ● ●                              │
  * └─────────────────────────────────────────┘
  *
  * Specs:
- * - 12 preset colors (6 per row)
+ * - 15 preset colors (5 per row)
  * - Circular swatches, 40dp
- * - Selected: ring indicator (2dp border)
+ * - Selected: white check icon and border
  * - Gap: 12dp
  */
 
-val CategoryColors = listOf(
-    "#EF4444", // Red
-    "#F97316", // Orange
-    "#F59E0B", // Amber
-    "#EAB308", // Yellow
-    "#84CC16", // Lime
-    "#22C55E", // Green
-    "#14B8A6", // Teal
-    "#06B6D4", // Cyan
-    "#3B82F6", // Blue
-    "#6366F1", // Indigo
-    "#8B5CF6", // Violet
-    "#EC4899"  // Pink
-)
+/**
+ * Legacy colors for backward compatibility.
+ * New code should use IconRegistry.colorPalette.
+ */
+val CategoryColors: List<String>
+    get() = IconRegistry().colorPalette
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -58,12 +54,14 @@ fun CategoryColorPalette(
     onColorSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val iconRegistry = remember { IconRegistry() }
+
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(FinutsSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(FinutsSpacing.sm)
     ) {
-        CategoryColors.forEach { colorHex ->
+        iconRegistry.colorPalette.forEach { colorHex ->
             ColorSwatch(
                 colorHex = colorHex,
                 isSelected = colorHex.equals(selectedColor, ignoreCase = true),
@@ -90,7 +88,7 @@ private fun ColorSwatch(
                 if (isSelected) {
                     Modifier.border(
                         width = 3.dp,
-                        color = FinutsColors.TextPrimary,
+                        color = Color.White,
                         shape = CircleShape
                     )
                 } else {
@@ -100,18 +98,12 @@ private fun ColorSwatch(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Inner white ring for selected state
         if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(color)
-                    .border(
-                        width = 2.dp,
-                        color = Color.White,
-                        shape = CircleShape
-                    )
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

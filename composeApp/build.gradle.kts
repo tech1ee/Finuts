@@ -22,6 +22,8 @@ kotlin {
         target.binaries.framework {
             baseName = "composeApp"
             isStatic = true
+            // Export shared module so Swift can access LLMBridge and other iOS-specific types
+            export(projects.shared)
         }
     }
 
@@ -30,7 +32,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.shared)
+            // Use api() for shared module so it can be exported in iOS framework
+            api(projects.shared)
 
             // Compose
             implementation(compose.ui)

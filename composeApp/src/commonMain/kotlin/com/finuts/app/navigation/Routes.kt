@@ -40,4 +40,10 @@ sealed interface Route {
 
     // Bank import
     @Serializable data object Import : Route
+
+    // AI Features (Settings sub-screen)
+    @Serializable data object AIFeatures : Route
+
+    // LLM Debug (AI Features sub-screen)
+    @Serializable data object LLMDebug : Route
 }

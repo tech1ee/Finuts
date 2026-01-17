@@ -1,5 +1,6 @@
 package com.finuts.app.feature.`import`
 
+import co.touchlab.kermit.Logger
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -11,6 +12,8 @@ import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+
+private val log = Logger.withTag("ImportScreen")
 
 /**
  * Main Import screen that orchestrates the import flow.
@@ -84,7 +87,13 @@ fun ImportScreen(
         }
 
         ImportStep.CONFIRM -> {
+            log.i { "CONFIRM STEP: uiState.selectedIndices=${uiState.selectedIndices.size}" }
+            log.d { "CONFIRM STEP: uiState.selectedAccountId=${uiState.selectedAccountId}" }
+            log.d { "CONFIRM STEP: uiState.previewResult=${uiState.previewResult != null}" }
+
             val transactions = uiState.reviewableTransactions
+            log.d { "CONFIRM STEP: reviewableTransactions=${transactions.size}" }
+
             val totalExpenses = transactions
                 .filter { it.index in uiState.selectedIndices && it.transaction.amount < 0 }
                 .sumOf { it.transaction.amount }
@@ -93,7 +102,10 @@ fun ImportScreen(
                 .filter { it.index in uiState.selectedIndices && it.transaction.amount > 0 }
                 .sumOf { it.transaction.amount }
 
+            log.d { "CONFIRM STEP CALC: totalExpenses=$totalExpenses, totalIncome=$totalIncome" }
+
             val dateRange = buildDateRange(transactions)
+            log.d { "CONFIRM STEP: dateRange=$dateRange" }
 
             ImportConfirmScreen(
                 accounts = accounts,
@@ -105,7 +117,10 @@ fun ImportScreen(
                 stepCounterText = uiState.stepCounterText,
                 progressFraction = uiState.progressFraction,
                 onAccountSelect = viewModel::onAccountSelect,
-                onConfirm = viewModel::onConfirmImport,
+                onConfirm = {
+                    log.i { "onConfirm CALLBACK: Calling viewModel.onConfirmImport()" }
+                    viewModel.onConfirmImport()
+                },
                 onNavigateBack = { viewModel.onNavigateBack() },
                 modifier = modifier
             )

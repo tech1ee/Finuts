@@ -33,6 +33,13 @@ class OnboardingStateTest {
     }
 
     @Test
+    fun `OnboardingStep AIModelSetup is a singleton`() {
+        val step1 = OnboardingStep.AIModelSetup
+        val step2 = OnboardingStep.AIModelSetup
+        assertEquals(step1, step2)
+    }
+
+    @Test
     fun `OnboardingStep Completion is a singleton`() {
         val step1 = OnboardingStep.Completion
         val step2 = OnboardingStep.Completion
@@ -44,11 +51,13 @@ class OnboardingStateTest {
         val welcome: OnboardingStep = OnboardingStep.Welcome
         val goalSelection: OnboardingStep = OnboardingStep.GoalSelection
         val firstAccount: OnboardingStep = OnboardingStep.FirstAccountSetup
+        val aiModelSetup: OnboardingStep = OnboardingStep.AIModelSetup
         val completion: OnboardingStep = OnboardingStep.Completion
 
         assertIs<OnboardingStep.Welcome>(welcome)
         assertIs<OnboardingStep.GoalSelection>(goalSelection)
         assertIs<OnboardingStep.FirstAccountSetup>(firstAccount)
+        assertIs<OnboardingStep.AIModelSetup>(aiModelSetup)
         assertIs<OnboardingStep.Completion>(completion)
     }
 

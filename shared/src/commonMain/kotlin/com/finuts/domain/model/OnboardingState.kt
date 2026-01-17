@@ -17,6 +17,9 @@ sealed interface OnboardingStep {
     /** First account setup - inline form to create first account */
     data object FirstAccountSetup : OnboardingStep
 
+    /** AI model setup - optional download of on-device AI model */
+    data object AIModelSetup : OnboardingStep
+
     /** Completion screen - success message and transition to main app */
     data object Completion : OnboardingStep
 }

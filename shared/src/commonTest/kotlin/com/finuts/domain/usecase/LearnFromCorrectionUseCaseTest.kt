@@ -1,5 +1,6 @@
 package com.finuts.domain.usecase
 
+import com.finuts.data.categorization.MerchantNormalizer
 import com.finuts.domain.entity.CategoryCorrection
 import com.finuts.domain.entity.LearnedMerchant
 import com.finuts.domain.entity.LearnedMerchantSource
@@ -20,6 +21,7 @@ import kotlin.test.assertTrue
 class LearnFromCorrectionUseCaseTest {
 
     private val fixedTime = Instant.fromEpochMilliseconds(1704067200000) // 2024-01-01
+    private val merchantNormalizer = MerchantNormalizer()
 
     // --- Test Doubles ---
 
@@ -102,10 +104,10 @@ class LearnFromCorrectionUseCaseTest {
     // --- Tests ---
 
     @Test
-    fun `saves correction on first correction`() = runTest {
+    fun `creates mapping on first correction with threshold 1`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         val result = useCase.execute(
             transactionId = "tx-1",
@@ -116,24 +118,27 @@ class LearnFromCorrectionUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(1, correctionRepo.savedCorrections.size)
-        assertTrue(result.getOrNull() is LearnFromCorrectionUseCase.LearnResult.CorrectionSaved)
+        // With threshold=1, first correction creates mapping immediately (like Copilot/Monarch)
+        assertTrue(result.getOrNull() is LearnFromCorrectionUseCase.LearnResult.MappingCreated)
+        assertEquals(1, merchantRepo.savedMerchants.size)
     }
 
     @Test
-    fun `creates mapping after threshold corrections`() = runTest {
+    fun `second correction updates existing mapping`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
-        // First correction - both merchants normalize to "MAGNUM SUPER"
-        useCase.execute(
+        // First correction - creates mapping (threshold=1)
+        val firstResult = useCase.execute(
             transactionId = "tx-1",
             originalCategoryId = "other",
             correctedCategoryId = "groceries",
             merchantName = "MAGNUM SUPER #123"
         )
+        assertTrue(firstResult.getOrNull() is LearnFromCorrectionUseCase.LearnResult.MappingCreated)
 
-        // Second correction (reaches threshold) - same normalized merchant
+        // Second correction - updates existing mapping
         val result = useCase.execute(
             transactionId = "tx-2",
             originalCategoryId = "other",
@@ -143,7 +148,8 @@ class LearnFromCorrectionUseCaseTest {
 
         assertTrue(result.isSuccess)
         val learnResult = result.getOrNull()
-        assertTrue(learnResult is LearnFromCorrectionUseCase.LearnResult.MappingCreated)
+        // Now updates instead of creates
+        assertTrue(learnResult is LearnFromCorrectionUseCase.LearnResult.MappingUpdated)
         assertEquals(1, merchantRepo.savedMerchants.size)
     }
 
@@ -151,7 +157,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `updates existing mapping with new sample`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         // Pre-create a mapping (pattern is now "MAGNUM SUPER" not regex)
         val existingMapping = LearnedMerchant(
@@ -187,7 +193,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `fails with blank merchant name`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         val result = useCase.execute(
             transactionId = "tx-1",
@@ -204,7 +210,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `fails with null merchant name`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         val result = useCase.execute(
             transactionId = "tx-1",
@@ -220,7 +226,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `normalizes merchant name before saving`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         useCase.execute(
             transactionId = "tx-1",
@@ -237,7 +243,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `confidence increases with more samples`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         val existingMapping = LearnedMerchant(
             id = "lm-1",
@@ -270,7 +276,7 @@ class LearnFromCorrectionUseCaseTest {
     fun `confidence capped at maximum`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
         val existingMapping = LearnedMerchant(
             id = "lm-1",
@@ -299,30 +305,33 @@ class LearnFromCorrectionUseCaseTest {
     }
 
     @Test
-    fun `handles different categories for same merchant`() = runTest {
+    fun `handles different categories for same merchant - last wins`() = runTest {
         val correctionRepo = FakeCorrectionRepository()
         val merchantRepo = FakeMerchantRepository()
-        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo) { fixedTime }
+        val useCase = LearnFromCorrectionUseCase(correctionRepo, merchantRepo, merchantNormalizer) { fixedTime }
 
-        // First correction - groceries
-        useCase.execute(
+        // First correction - groceries (creates mapping with threshold=1)
+        val firstResult = useCase.execute(
             transactionId = "tx-1",
             originalCategoryId = null,
             correctedCategoryId = "groceries",
             merchantName = "AMAZON"
         )
+        assertTrue(firstResult.getOrNull() is LearnFromCorrectionUseCase.LearnResult.MappingCreated)
 
-        // Second correction - different category
-        useCase.execute(
+        // Second correction - different category (updates mapping)
+        val secondResult = useCase.execute(
             transactionId = "tx-2",
             originalCategoryId = null,
             correctedCategoryId = "shopping",
             merchantName = "AMAZON"
         )
+        assertTrue(secondResult.getOrNull() is LearnFromCorrectionUseCase.LearnResult.MappingUpdated)
 
         // Should have 2 corrections saved
         assertEquals(2, correctionRepo.savedCorrections.size)
-        // But no mapping yet (threshold not reached for either category)
-        assertTrue(merchantRepo.savedMerchants.isEmpty())
+        // With threshold=1, mapping exists and last category wins
+        assertEquals(1, merchantRepo.savedMerchants.size)
+        assertEquals("shopping", merchantRepo.savedMerchants.values.first().categoryId)
     }
 }

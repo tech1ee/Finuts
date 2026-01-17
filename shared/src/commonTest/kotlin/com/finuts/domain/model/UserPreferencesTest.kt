@@ -236,4 +236,50 @@ class UserPreferencesTest {
     fun `UserGoal BUDGET_BETTER has correct displayNameKey`() {
         assertEquals("goal_budget_better", UserGoal.BUDGET_BETTER.displayNameKey)
     }
+
+    // AI Features tests
+    @Test
+    fun `default UserPreferences has aiCategorizationEnabled true`() {
+        val prefs = UserPreferences()
+        assertTrue(prefs.aiCategorizationEnabled)
+    }
+
+    @Test
+    fun `default UserPreferences has null selectedModelId`() {
+        val prefs = UserPreferences()
+        assertNull(prefs.selectedModelId)
+    }
+
+    @Test
+    fun `default UserPreferences has aiModelDownloadedInOnboarding false`() {
+        val prefs = UserPreferences()
+        assertFalse(prefs.aiModelDownloadedInOnboarding)
+    }
+
+    @Test
+    fun `UserPreferences can be created with AI fields`() {
+        val prefs = UserPreferences(
+            aiCategorizationEnabled = false,
+            selectedModelId = "compact",
+            aiModelDownloadedInOnboarding = true
+        )
+
+        assertFalse(prefs.aiCategorizationEnabled)
+        assertEquals("compact", prefs.selectedModelId)
+        assertTrue(prefs.aiModelDownloadedInOnboarding)
+    }
+
+    @Test
+    fun `UserPreferences copy works for AI fields`() {
+        val original = UserPreferences()
+        val modified = original.copy(
+            aiCategorizationEnabled = false,
+            selectedModelId = "standard"
+        )
+
+        assertTrue(original.aiCategorizationEnabled)
+        assertNull(original.selectedModelId)
+        assertFalse(modified.aiCategorizationEnabled)
+        assertEquals("standard", modified.selectedModelId)
+    }
 }

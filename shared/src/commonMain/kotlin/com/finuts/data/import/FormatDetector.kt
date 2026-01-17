@@ -6,7 +6,7 @@ import com.finuts.domain.entity.import.DocumentType
  * Detects document types from file extensions and content.
  * Used to route documents to appropriate parsers.
  */
-object FormatDetector {
+class FormatDetector : FormatDetectorInterface {
 
     private val EXTENSION_MAP = mapOf(
         "csv" to { DocumentType.Csv(',', "UTF-8") },
@@ -51,7 +51,7 @@ object FormatDetector {
      * @param content Optional file content for deeper analysis
      * @return Detected DocumentType
      */
-    fun detect(filename: String, content: ByteArray?): DocumentType {
+    override fun detect(filename: String, content: ByteArray?): DocumentType {
         // First try content-based detection (more accurate)
         if (content != null && content.isNotEmpty()) {
             val contentType = detectFromContent(content)
@@ -70,7 +70,7 @@ object FormatDetector {
      * @param filename The filename including extension
      * @return Detected DocumentType
      */
-    fun detectFromExtension(filename: String): DocumentType {
+    override fun detectFromExtension(filename: String): DocumentType {
         val extension = filename.substringAfterLast('.', "").lowercase()
         return EXTENSION_MAP[extension]?.invoke() ?: DocumentType.Unknown
     }
@@ -81,7 +81,7 @@ object FormatDetector {
      * @param content File content as bytes
      * @return Detected DocumentType
      */
-    fun detectFromContent(content: ByteArray): DocumentType {
+    override fun detectFromContent(content: ByteArray): DocumentType {
         if (content.isEmpty()) {
             return DocumentType.Unknown
         }
@@ -182,7 +182,7 @@ object FormatDetector {
      * @param content CSV content as string
      * @return Detected delimiter character
      */
-    fun detectCsvDelimiter(content: String): Char {
+    override fun detectCsvDelimiter(content: String): Char {
         val delimiters = listOf(',', ';', '\t', '|')
         val lines = content.lines().filter { it.isNotBlank() }.take(10)
 
@@ -224,7 +224,7 @@ object FormatDetector {
      * @param content Document text content
      * @return Bank identifier or null if not recognized
      */
-    fun detectBankSignature(content: String): String? {
+    override fun detectBankSignature(content: String): String? {
         val lower = content.lowercase()
 
         for (bank in BANK_SIGNATURES) {
@@ -242,7 +242,7 @@ object FormatDetector {
      * @param content File content as bytes
      * @return Detected encoding name
      */
-    fun detectEncoding(content: ByteArray): String {
+    override fun detectEncoding(content: ByteArray): String {
         if (content.size < 2) return "UTF-8"
 
         // Check BOM

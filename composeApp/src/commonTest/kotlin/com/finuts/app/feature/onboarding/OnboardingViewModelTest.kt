@@ -160,7 +160,7 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `onNext from FirstAccountSetup goes to Completion`() = runTest {
+    fun `onNext from FirstAccountSetup goes to AIModelSetup`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Welcome
 
@@ -176,11 +176,11 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
             awaitItem()
 
-            viewModel.onNext() // -> Completion
+            viewModel.onNext() // -> AIModelSetup
             advanceUntilIdle()
 
             val state = awaitItem()
-            assertIs<OnboardingStep.Completion>(state.currentStep)
+            assertIs<OnboardingStep.AIModelSetup>(state.currentStep)
         }
     }
 
@@ -436,9 +436,9 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `createAccount with valid data creates account and moves to Completion`() = runTest {
+    fun `createAccount with valid data creates account and moves to AIModelSetup`() = runTest {
         // Create ViewModel with this test scope so coroutines execute in our control
-        val testViewModel = OnboardingViewModel(preferencesRepository, accountRepository, this)
+        val testViewModel = OnboardingViewModel(preferencesRepository, accountRepository, null, this)
 
         // Navigate to FirstAccountSetup
         testViewModel.onNext() // -> CurrencyLanguage
@@ -458,7 +458,7 @@ class OnboardingViewModelTest {
 
         // Verify final state
         val finalState = testViewModel.uiState.value
-        assertIs<OnboardingStep.Completion>(finalState.currentStep)
+        assertIs<OnboardingStep.AIModelSetup>(finalState.currentStep)
         assertFalse(finalState.isCreatingAccount)
         assertNotNull(finalState.createdAccountId)
         assertEquals("My Wallet", finalState.createdAccountName)
@@ -475,7 +475,7 @@ class OnboardingViewModelTest {
     @Test
     fun `createAccount with comma decimal separator works`() = runTest {
         // Create ViewModel with this test scope so coroutines execute in our control
-        val testViewModel = OnboardingViewModel(preferencesRepository, accountRepository, this)
+        val testViewModel = OnboardingViewModel(preferencesRepository, accountRepository, null, this)
 
         // Fill form with comma decimal separator
         testViewModel.updateAccountName("Test")
@@ -500,7 +500,7 @@ class OnboardingViewModelTest {
     // ========== Skip Account Creation Tests ==========
 
     @Test
-    fun `skipAccountCreation moves to Completion without creating account`() = runTest {
+    fun `skipAccountCreation moves to AIModelSetup without creating account`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Initial
 
@@ -519,7 +519,7 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
 
             val state = awaitItem()
-            assertIs<OnboardingStep.Completion>(state.currentStep)
+            assertIs<OnboardingStep.AIModelSetup>(state.currentStep)
             assertNull(state.createdAccountId)
             assertNull(state.createdAccountName)
         }
@@ -561,6 +561,10 @@ class OnboardingViewModelTest {
             awaitItem()
 
             viewModel.onNext() // -> FirstAccountSetup
+            advanceUntilIdle()
+            awaitItem()
+
+            viewModel.onNext() // -> AIModelSetup
             advanceUntilIdle()
             awaitItem()
 
@@ -679,7 +683,7 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `progressPercent is 25 on CurrencyLanguage`() = runTest {
+    fun `progressPercent is 20 on CurrencyLanguage`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Welcome
 
@@ -687,12 +691,12 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
 
             val state = awaitItem()
-            assertEquals(0.25f, state.progressPercent, 0.01f)
+            assertEquals(0.20f, state.progressPercent, 0.01f)
         }
     }
 
     @Test
-    fun `progressPercent is 50 on GoalSelection`() = runTest {
+    fun `progressPercent is 40 on GoalSelection`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Welcome
 
@@ -704,12 +708,12 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
 
             val state = awaitItem()
-            assertEquals(0.50f, state.progressPercent, 0.01f)
+            assertEquals(0.40f, state.progressPercent, 0.01f)
         }
     }
 
     @Test
-    fun `progressPercent is 75 on FirstAccountSetup`() = runTest {
+    fun `progressPercent is 60 on FirstAccountSetup`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Welcome
 
@@ -725,7 +729,32 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
 
             val state = awaitItem()
-            assertEquals(0.75f, state.progressPercent, 0.01f)
+            assertEquals(0.60f, state.progressPercent, 0.01f)
+        }
+    }
+
+    @Test
+    fun `progressPercent is 80 on AIModelSetup`() = runTest {
+        viewModel.uiState.test {
+            awaitItem() // Welcome
+
+            viewModel.onNext() // CurrencyLanguage
+            advanceUntilIdle()
+            awaitItem()
+
+            viewModel.onNext() // GoalSelection
+            advanceUntilIdle()
+            awaitItem()
+
+            viewModel.onNext() // FirstAccountSetup
+            advanceUntilIdle()
+            awaitItem()
+
+            viewModel.onNext() // AIModelSetup
+            advanceUntilIdle()
+
+            val state = awaitItem()
+            assertEquals(0.80f, state.progressPercent, 0.01f)
         }
     }
 
@@ -743,6 +772,10 @@ class OnboardingViewModelTest {
             awaitItem()
 
             viewModel.onNext() // FirstAccountSetup
+            advanceUntilIdle()
+            awaitItem()
+
+            viewModel.onNext() // AIModelSetup
             advanceUntilIdle()
             awaitItem()
 
@@ -813,11 +846,24 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `setStep with index 4 goes to Completion`() = runTest {
+    fun `setStep with index 4 goes to AIModelSetup`() = runTest {
         viewModel.uiState.test {
             awaitItem() // Welcome
 
             viewModel.setStep(4)
+            advanceUntilIdle()
+
+            val state = awaitItem()
+            assertIs<OnboardingStep.AIModelSetup>(state.currentStep)
+        }
+    }
+
+    @Test
+    fun `setStep with index 5 goes to Completion`() = runTest {
+        viewModel.uiState.test {
+            awaitItem() // Welcome
+
+            viewModel.setStep(5)
             advanceUntilIdle()
 
             val state = awaitItem()
@@ -843,9 +889,13 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
             assertEquals(3, awaitItem().currentStepIndex)
 
-            viewModel.onNext() // Completion
+            viewModel.onNext() // AIModelSetup
             advanceUntilIdle()
             assertEquals(4, awaitItem().currentStepIndex)
+
+            viewModel.onNext() // Completion
+            advanceUntilIdle()
+            assertEquals(5, awaitItem().currentStepIndex)
         }
     }
 

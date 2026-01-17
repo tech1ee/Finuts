@@ -32,6 +32,7 @@ fun DashboardScreen(
     onSeeAllAccountsClick: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onCreateBudgetClick: () -> Unit,
+    onNavigateToImport: () -> Unit,
     viewModel: DashboardViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -89,6 +90,7 @@ fun DashboardScreen(
                             onSeeAllAccounts = { viewModel.onSeeAllAccountsClick() },
                             onAddTransaction = { viewModel.onAddTransactionClick() },
                             onCreateBudget = onCreateBudgetClick,
+                            onImportClick = onNavigateToImport,
                             onSend = {},
                             onReceive = {},
                             onHistory = { viewModel.onSeeAllTransactionsClick() }

@@ -1,5 +1,6 @@
 package com.finuts.app.feature.`import`
 
+import co.touchlab.kermit.Logger
 import com.finuts.app.presentation.base.BaseViewModel
 import com.finuts.data.import.ImportFileProcessor
 import com.finuts.domain.entity.Account
@@ -26,6 +27,11 @@ class ImportViewModel(
     private val accountRepository: AccountRepository,
     private val fileProcessor: ImportFileProcessor
 ) : BaseViewModel() {
+    private val log = Logger.withTag("ImportViewModel")
+
+    init {
+        log.i { "Created" }
+    }
 
     private val _uiState = MutableStateFlow(ImportUiState())
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()
@@ -44,10 +50,11 @@ class ImportViewModel(
     private fun loadAccounts() {
         safeScope.launch {
             accountRepository.getAllAccounts().collect { accountList ->
+                log.d { "loadAccounts: count=${accountList.size}" }
                 _accounts.value = accountList
-                // Auto-select first non-archived account if none selected
                 if (_uiState.value.selectedAccountId == null) {
                     accountList.firstOrNull { !it.isArchived }?.let { account ->
+                        log.d { "loadAccounts: autoSelected=${account.id}" }
                         _uiState.update { it.copy(selectedAccountId = account.id) }
                     }
                 }
@@ -58,16 +65,17 @@ class ImportViewModel(
     private fun observeProgress() {
         safeScope.launch {
             importTransactionsUseCase.progress.collect { progress ->
+                log.d { "observeProgress: ${progress::class.simpleName}" }
                 _uiState.update { it.copy(progress = progress) }
 
                 when (progress) {
                     is ImportProgress.AwaitingConfirmation -> {
-                        // Auto-select non-duplicate transactions
+                        val txCount = progress.result.transactions.size
                         val selectedIndices = progress.result.transactions
                             .filter { it.isSelected }
                             .map { it.index }
                             .toSet()
-
+                        log.i { "observeProgress READY: total=$txCount, selected=${selectedIndices.size}" }
                         _uiState.update {
                             it.copy(
                                 currentStep = ImportStep.REVIEW,
@@ -79,36 +87,45 @@ class ImportViewModel(
                     }
 
                     is ImportProgress.Completed -> {
-                        _uiState.update {
-                            it.copy(
+                        log.i { "observeProgress COMPLETED: saved=${progress.savedCount}, skipped=${progress.skippedCount}" }
+                        _uiState.update { state ->
+                            state.copy(
                                 currentStep = ImportStep.RESULT,
-                                isLoading = false
+                                isLoading = false,
+                                importResult = FinalImportResult(
+                                    isSuccess = true,
+                                    savedCount = progress.savedCount,
+                                    skippedCount = progress.skippedCount,
+                                    duplicateCount = state.duplicateCount
+                                )
                             )
                         }
                     }
 
                     is ImportProgress.Failed -> {
-                        _uiState.update {
-                            it.copy(
+                        log.e { "observeProgress FAILED: message='${progress.message}', recoverable=${progress.recoverable}" }
+                        _uiState.update { state ->
+                            state.copy(
                                 currentStep = ImportStep.RESULT,
+                                isLoading = false,
                                 error = progress.message,
-                                isLoading = false
+                                importResult = FinalImportResult(
+                                    isSuccess = false,
+                                    savedCount = 0,
+                                    skippedCount = 0,
+                                    duplicateCount = 0,
+                                    errorMessage = progress.message
+                                )
                             )
                         }
                     }
 
                     is ImportProgress.Cancelled -> {
-                        _uiState.update {
-                            it.copy(
-                                currentStep = ImportStep.ENTRY,
-                                isLoading = false
-                            )
-                        }
+                        log.i { "observeProgress CANCELLED" }
+                        _uiState.update { it.copy(currentStep = ImportStep.ENTRY, isLoading = false) }
                     }
 
-                    else -> {
-                        // Processing states - just update progress
-                    }
+                    else -> { /* Processing states - UI updates via progress */ }
                 }
             }
         }
@@ -116,21 +133,23 @@ class ImportViewModel(
 
     /**
      * Handle file selection with raw bytes from file picker.
-     * Parses the file and starts the import process.
      */
     fun onSelectFileWithBytes(filename: String, bytes: ByteArray) {
+        log.i { "onSelectFileWithBytes START: filename=$filename, size=${bytes.size}" }
+
         _uiState.update {
-            it.copy(
-                filename = filename,
-                currentStep = ImportStep.PROCESSING,
-                isLoading = true,
-                error = null
-            )
+            it.copy(filename = filename, currentStep = ImportStep.PROCESSING, isLoading = true, error = null)
         }
 
         safeScope.launch {
-            val parseResult = fileProcessor.process(filename, bytes)
-            onFileSelected(filename, parseResult)
+            try {
+                val parseResult = fileProcessor.process(filename, bytes)
+                log.d { "onSelectFileWithBytes: parseResult=${parseResult::class.simpleName}" }
+                onFileSelected(filename, parseResult)
+            } catch (e: Exception) {
+                log.e(e) { "onSelectFileWithBytes FAILED: ${e.message}" }
+                _uiState.update { it.copy(currentStep = ImportStep.RESULT, error = e.message, isLoading = false) }
+            }
         }
     }
 
@@ -138,13 +157,10 @@ class ImportViewModel(
      * Handle file selection from the file picker.
      */
     fun onFileSelected(filename: String, parseResult: ImportResult) {
+        log.i { "onFileSelected START: filename=$filename, result=${parseResult::class.simpleName}" }
+
         _uiState.update {
-            it.copy(
-                filename = filename,
-                currentStep = ImportStep.PROCESSING,
-                isLoading = true,
-                error = null
-            )
+            it.copy(filename = filename, currentStep = ImportStep.PROCESSING, isLoading = true, error = null)
         }
 
         safeScope.launch {
@@ -152,19 +168,20 @@ class ImportViewModel(
                 ?: _accounts.value.firstOrNull()?.id
                 ?: "default"
 
+            log.d { "onFileSelected: Calling startImport with accountId=$accountId" }
+
             val result = importTransactionsUseCase.startImport(
                 parseResult = parseResult,
                 targetAccountId = accountId
             )
 
+            result.onSuccess {
+                log.i { "onFileSelected SUCCESS: transactions=${it.transactions.size}" }
+            }
+
             result.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        currentStep = ImportStep.RESULT,
-                        error = error.message,
-                        isLoading = false
-                    )
-                }
+                log.e(error) { "onFileSelected FAILED: ${error.message}" }
+                _uiState.update { it.copy(currentStep = ImportStep.RESULT, error = error.message, isLoading = false) }
             }
         }
     }
@@ -243,25 +260,39 @@ class ImportViewModel(
      */
     fun onConfirmImport() {
         val state = _uiState.value
-        val accountId = state.selectedAccountId ?: return
+        val accountId = state.selectedAccountId
+
+        log.i { "onConfirmImport START: selectedCount=${state.selectedIndices.size}, accountId=$accountId" }
+
+        if (accountId == null) {
+            log.w { "onConfirmImport ABORT: accountId is null" }
+            return
+        }
 
         _uiState.update { it.copy(isLoading = true) }
 
         safeScope.launch {
-            val result = importTransactionsUseCase.confirmImport(
-                selectedIndices = state.selectedIndices,
-                categoryOverrides = state.categoryOverrides,
-                targetAccountId = accountId
-            )
+            try {
+                log.d { "onConfirmImport: Calling useCase.confirmImport..." }
 
-            result.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        error = error.message,
-                        isLoading = false
-                    )
+                val result = importTransactionsUseCase.confirmImport(
+                    selectedIndices = state.selectedIndices,
+                    categoryOverrides = state.categoryOverrides,
+                    targetAccountId = accountId
+                )
+
+                result.onSuccess { confirmation ->
+                    log.i { "onConfirmImport SUCCESS: saved=${confirmation.savedCount}, skipped=${confirmation.skippedCount}" }
                 }
-                _sideEffects.emit(ImportSideEffect.ShowError(error.message ?: "Unknown error"))
+
+                result.onFailure { error ->
+                    log.e(error) { "onConfirmImport FAILED: ${error.message}" }
+                    _uiState.update { it.copy(error = error.message, isLoading = false) }
+                    _sideEffects.emit(ImportSideEffect.ShowError(error.message ?: "Unknown error"))
+                }
+            } catch (e: Exception) {
+                log.e(e) { "onConfirmImport EXCEPTION: ${e.message}" }
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }

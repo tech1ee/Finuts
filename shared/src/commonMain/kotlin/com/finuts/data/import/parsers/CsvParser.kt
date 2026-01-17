@@ -1,19 +1,21 @@
 package com.finuts.data.import.parsers
 
-import com.finuts.data.import.utils.DateParser
+import com.finuts.data.import.utils.DateParserInterface
 import com.finuts.data.import.utils.NumberLocale
-import com.finuts.data.import.utils.NumberParser
+import com.finuts.data.import.utils.NumberParserInterface
 import com.finuts.domain.entity.import.DocumentType
 import com.finuts.domain.entity.import.ImportResult
 import com.finuts.domain.entity.import.ImportSource
 import com.finuts.domain.entity.import.ImportedTransaction
-import kotlinx.datetime.LocalDate
 
 /**
  * CSV parser with automatic column detection.
  * Parses bank statements in CSV format and extracts transactions.
  */
-class CsvParser {
+class CsvParser(
+    private val dateParser: DateParserInterface,
+    private val numberParser: NumberParserInterface
+) {
 
     private val dateColumns = setOf(
         "date", "дата", "transaction date", "дата операции", "дата транзакции",
@@ -171,13 +173,13 @@ class CsvParser {
         val amountStr = columnMap.amountIndex?.let { values.getOrNull(it) } ?: return null
 
         val date = try {
-            DateParser.parse(dateStr.trim())
+            dateParser.parse(dateStr.trim())
         } catch (_: Exception) {
             return null
         }
 
         val amount = try {
-            NumberParser.parse(amountStr.trim(), NumberLocale.AUTO)
+            numberParser.parse(amountStr.trim(), NumberLocale.AUTO)
         } catch (_: Exception) {
             return null
         }
@@ -189,7 +191,7 @@ class CsvParser {
         val balance = columnMap.balanceIndex?.let { index ->
             values.getOrNull(index)?.trim()?.takeIf { it.isNotBlank() }?.let {
                 try {
-                    NumberParser.parse(it, NumberLocale.AUTO)
+                    numberParser.parse(it, NumberLocale.AUTO)
                 } catch (_: Exception) {
                     null
                 }

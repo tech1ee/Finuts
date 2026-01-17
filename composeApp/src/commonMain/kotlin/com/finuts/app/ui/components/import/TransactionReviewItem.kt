@@ -1,6 +1,7 @@
 package com.finuts.app.ui.components.import
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,8 @@ import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsMoneyTypography
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
+import com.finuts.app.ui.icons.CategoryIcon
+import com.finuts.app.ui.icons.getCategoryColor
 
 /**
  * Display status for duplicate detection in UI.
@@ -64,7 +68,7 @@ enum class TransactionDuplicateDisplayStatus {
  */
 @Composable
 fun TransactionReviewItem(
-    categoryEmoji: String,
+    categoryId: String?,
     description: String,
     date: String,
     amount: Long,
@@ -72,6 +76,7 @@ fun TransactionReviewItem(
     matchInfo: String?,
     isSelected: Boolean,
     onSelectionChange: (Boolean) -> Unit,
+    onCategoryClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isDuplicate = duplicateStatus.isDuplicate
@@ -116,11 +121,23 @@ fun TransactionReviewItem(
 
         Spacer(modifier = Modifier.width(FinutsSpacing.sm))
 
-        // Category emoji
-        Text(
-            text = categoryEmoji,
-            modifier = Modifier.size(40.dp),
-            style = FinutsTypography.headlineMedium
+        // Category icon (clickable for category override)
+        val iconKey = categoryId ?: "other"
+        val categoryColor = getCategoryColor(iconKey)
+        CategoryIcon(
+            iconKey = iconKey,
+            modifier = if (onCategoryClick != null) {
+                Modifier
+                    .clip(RoundedCornerShape(FinutsSpacing.sm))
+                    .clickable(onClick = onCategoryClick)
+            } else {
+                Modifier
+            },
+            tint = categoryColor,
+            showContainer = true,
+            containerSize = 40.dp,
+            size = 24.dp,
+            containerColor = categoryColor.copy(alpha = 0.15f)
         )
 
         Spacer(modifier = Modifier.width(FinutsSpacing.iconToTextGap))

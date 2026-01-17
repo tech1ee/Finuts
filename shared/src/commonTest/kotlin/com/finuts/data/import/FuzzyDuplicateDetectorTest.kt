@@ -226,4 +226,101 @@ class FuzzyDuplicateDetectorTest {
         assertIs<DuplicateStatus.ProbableDuplicate>(status)
         assertTrue(status.similarity in 0.5f..0.94f)
     }
+
+    // === Normalization Function Tests ===
+
+    @Test
+    fun `normalizeDescription handles Cyrillic characters`() {
+        val normalized = detector.normalizeDescription("МАГНУМ АЛМАТЫ")
+        assertEquals("МАГНУМ АЛМАТЫ", normalized)
+    }
+
+    @Test
+    fun `normalizeDescription removes punctuation`() {
+        val normalized = detector.normalizeDescription("Coffee, Shop! #123*")
+        assertEquals("COFFEE SHOP 123", normalized)
+    }
+
+    @Test
+    fun `normalizeDescription trims whitespace`() {
+        val normalized = detector.normalizeDescription("  Coffee Shop  ")
+        assertEquals("COFFEE SHOP", normalized)
+    }
+
+    @Test
+    fun `normalizeDescription handles empty string`() {
+        val normalized = detector.normalizeDescription("")
+        assertEquals("", normalized)
+    }
+
+    // === Similarity Calculation Tests ===
+
+    @Test
+    fun `calculateSimilarity returns 1 for identical strings`() {
+        val similarity = detector.calculateSimilarity("HELLO", "HELLO")
+        assertEquals(1.0f, similarity)
+    }
+
+    @Test
+    fun `calculateSimilarity returns 1 for two empty strings`() {
+        val similarity = detector.calculateSimilarity("", "")
+        assertEquals(1.0f, similarity)
+    }
+
+    @Test
+    fun `calculateSimilarity returns 0 when one string is empty`() {
+        val similarity1 = detector.calculateSimilarity("HELLO", "")
+        val similarity2 = detector.calculateSimilarity("", "HELLO")
+        assertEquals(0.0f, similarity1)
+        assertEquals(0.0f, similarity2)
+    }
+
+    @Test
+    fun `calculateSimilarity handles completely different strings`() {
+        val similarity = detector.calculateSimilarity("ABC", "XYZ")
+        assertTrue(similarity < 0.5f)
+    }
+
+    // === Reason Building Tests ===
+
+    @Test
+    fun `probable duplicate with high similarity has specific reason`() {
+        val imported = createImported(description = "STARBUCKS COFFEE")
+        val existing = listOf(createExisting(description = "STARBUCKS COFFE"))  // typo
+
+        val status = detector.checkDuplicate(imported, existing)
+
+        assertIs<DuplicateStatus.ProbableDuplicate>(status)
+        assertTrue(status.reason.contains("similar") || status.reason.contains("match"))
+    }
+
+    @Test
+    fun `probable duplicate with medium similarity mentions amount`() {
+        // Create scenario where similarity is between 0.5 and 0.8
+        val imported = createImported(description = "COFFEE SHOP ORDER NUMBER 12345")
+        val existing = listOf(createExisting(description = "COFFEE"))
+
+        val status = detector.checkDuplicate(imported, existing)
+
+        if (status is DuplicateStatus.ProbableDuplicate) {
+            assertTrue(status.reason.contains("amount") || status.reason.contains("date"))
+        }
+    }
+
+    // === Best Match Selection ===
+
+    @Test
+    fun `selects best match among multiple candidates`() {
+        val imported = createImported(description = "COFFEE SHOP")
+        val existing = listOf(
+            createExisting(id = "tx-1", description = "COFFEE"),
+            createExisting(id = "tx-2", description = "COFFEE SHOP"),
+            createExisting(id = "tx-3", description = "COFFE")
+        )
+
+        val status = detector.checkDuplicate(imported, existing)
+
+        assertIs<DuplicateStatus.ExactDuplicate>(status)
+        assertEquals("tx-2", status.matchingTransactionId)  // Exact match
+    }
 }

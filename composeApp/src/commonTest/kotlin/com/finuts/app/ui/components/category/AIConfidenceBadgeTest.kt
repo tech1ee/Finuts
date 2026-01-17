@@ -89,13 +89,13 @@ class AIConfidenceBadgeTest {
     // --- Color Tests ---
 
     @Test
-    fun `badge uses warning color when confidence is medium (70-84)`() {
+    fun `badge uses warning color when confidence is medium 70-84 percent`() {
         val state = AIConfidenceBadgeState(confidence = 0.75f)
         assertEquals(BadgeColorType.WARNING, state.colorType)
     }
 
     @Test
-    fun `badge uses tertiary color when confidence is low (below 70)`() {
+    fun `badge uses tertiary color when confidence is below 70 percent`() {
         val state = AIConfidenceBadgeState(confidence = 0.50f)
         assertEquals(BadgeColorType.TERTIARY, state.colorType)
     }

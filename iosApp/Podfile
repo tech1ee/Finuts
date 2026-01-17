@@ -6,6 +6,9 @@ target 'iosApp' do
   # Shared KMP framework
   pod 'composeApp', :path => '../composeApp'
   pod 'shared', :path => '../shared'
+
+  # On-device LLM inference via llama.cpp
+  pod 'llama', :git => 'https://github.com/ggml-org/llama.cpp.git', :tag => 'b5040'
 end
 
 post_install do |installer|

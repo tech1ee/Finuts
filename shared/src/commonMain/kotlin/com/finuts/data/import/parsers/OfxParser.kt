@@ -1,7 +1,7 @@
 package com.finuts.data.import.parsers
 
 import com.finuts.data.import.utils.NumberLocale
-import com.finuts.data.import.utils.NumberParser
+import com.finuts.data.import.utils.NumberParserInterface
 import com.finuts.domain.entity.import.DocumentType
 import com.finuts.domain.entity.import.ImportResult
 import com.finuts.domain.entity.import.ImportSource
@@ -12,11 +12,14 @@ import kotlinx.datetime.LocalDate
  * Parser for OFX (Open Financial Exchange) and QFX formats.
  * Supports both SGML (v1.x) and XML (v2.x) formats.
  */
-class OfxParser {
+class OfxParser(
+    private val numberParser: NumberParserInterface
+) {
 
+    // Using [\s\S] instead of . with DOT_MATCHES_ALL for KMP compatibility
     private val transactionPattern = Regex(
-        """<STMTTRN>(.*?)</STMTTRN>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        """<STMTTRN>([\s\S]*?)</STMTTRN>""",
+        RegexOption.IGNORE_CASE
     )
 
     private val sgmlTagPattern = Regex("""<(\w+)>([^<\n]+)""")
@@ -135,7 +138,7 @@ class OfxParser {
 
     private fun parseAmount(amountStr: String): Long? {
         return try {
-            NumberParser.parse(amountStr.trim(), NumberLocale.US)
+            numberParser.parse(amountStr.trim(), NumberLocale.US)
         } catch (_: Exception) {
             null
         }

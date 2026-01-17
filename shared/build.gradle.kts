@@ -56,7 +56,7 @@ kotlin {
 
             // AI SDKs
             implementation(libs.openai.client)
-            implementation(libs.anthropic.client)
+            // Note: Anthropic uses Ktor directly (AnthropicProvider.kt)
         }
 
         commonTest.dependencies {
@@ -71,6 +71,8 @@ kotlin {
             implementation(libs.sqlcipher.android)
             // OCR: Tesseract4Android (OpenMP variant for performance)
             implementation(libs.tesseract.android)
+            // On-device LLM inference via llama.cpp
+            implementation("io.github.ljcamargo:llamacpp-kotlin:0.2.0")
         }
 
         // iOS source set hierarchy
@@ -78,6 +80,7 @@ kotlin {
             dependsOn(commonMain.get())
             dependencies {
                 implementation(libs.ktor.client.darwin)
+                // NSLogWriter is included in base kermit package for Kermit 2.x
             }
         }
         val iosX64Main by getting { dependsOn(iosMain) }

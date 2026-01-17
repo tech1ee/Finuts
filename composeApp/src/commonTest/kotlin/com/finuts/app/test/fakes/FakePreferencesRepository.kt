@@ -46,6 +46,18 @@ class FakePreferencesRepository : PreferencesRepository {
         _preferences.update { it.copy(userGoal = goal) }
     }
 
+    override suspend fun setAICategorizationEnabled(enabled: Boolean) {
+        _preferences.update { it.copy(aiCategorizationEnabled = enabled) }
+    }
+
+    override suspend fun setSelectedModelId(modelId: String?) {
+        _preferences.update { it.copy(selectedModelId = modelId) }
+    }
+
+    override suspend fun setAIModelDownloadedInOnboarding(downloaded: Boolean) {
+        _preferences.update { it.copy(aiModelDownloadedInOnboarding = downloaded) }
+    }
+
     override suspend fun clearAll() {
         _preferences.value = UserPreferences()
     }

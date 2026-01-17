@@ -1,6 +1,6 @@
 package com.finuts.domain.usecase
 
-import com.finuts.data.categorization.MerchantNormalizer
+import com.finuts.data.categorization.MerchantNormalizerInterface
 import com.finuts.domain.entity.CategoryCorrection
 import com.finuts.domain.entity.LearnedMerchant
 import com.finuts.domain.entity.LearnedMerchantSource
@@ -24,13 +24,21 @@ import kotlin.uuid.Uuid
 class LearnFromCorrectionUseCase(
     private val correctionRepository: CategoryCorrectionRepository,
     private val merchantRepository: LearnedMerchantRepository,
+    private val merchantNormalizer: MerchantNormalizerInterface,
     private val clock: () -> Instant = {
         Instant.fromEpochMilliseconds(kotlin.time.Clock.System.now().toEpochMilliseconds())
     }
 ) {
     companion object {
-        /** Minimum corrections before creating a learned mapping */
-        private const val MIN_CORRECTIONS_THRESHOLD = 2
+        /**
+         * Minimum corrections before creating a learned mapping.
+         *
+         * Set to 1 based on industry research (Copilot Money, Monarch Money):
+         * - When user explicitly corrects a category, that's a clear signal
+         * - Single correction should immediately create a learned mapping
+         * - This matches user expectations ("I told the app once, it should remember")
+         */
+        private const val MIN_CORRECTIONS_THRESHOLD = 1
 
         /** Initial confidence for user-learned mappings */
         private const val INITIAL_CONFIDENCE = 0.90f
@@ -79,7 +87,7 @@ class LearnFromCorrectionUseCase(
         }
 
         val now = clock()
-        val normalizedMerchant = MerchantNormalizer.normalize(merchantName)
+        val normalizedMerchant = merchantNormalizer.normalize(merchantName)
 
         if (normalizedMerchant.isBlank()) {
             return Result.failure(
@@ -128,7 +136,7 @@ class LearnFromCorrectionUseCase(
         correctionCount: Int,
         now: Instant
     ): LearnResult {
-        val merchantPattern = MerchantNormalizer.toPattern(normalizedMerchant)
+        val merchantPattern = merchantNormalizer.toPattern(normalizedMerchant)
         val existingMapping = merchantRepository.getByPattern(merchantPattern)
 
         return when {

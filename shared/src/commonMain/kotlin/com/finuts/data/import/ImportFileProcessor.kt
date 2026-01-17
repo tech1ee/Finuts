@@ -1,5 +1,6 @@
 package com.finuts.data.import
 
+import co.touchlab.kermit.Logger
 import com.finuts.data.import.ocr.PdfParser
 import com.finuts.data.import.parsers.CsvParser
 import com.finuts.data.import.parsers.OfxParser
@@ -12,11 +13,14 @@ import com.finuts.domain.entity.import.ImportResult
  * Orchestrates format detection and delegates to appropriate parsers.
  */
 class ImportFileProcessor(
+    private val formatDetector: FormatDetectorInterface,
     private val csvParser: CsvParser,
     private val ofxParser: OfxParser,
     private val qifParser: QifParser,
     private val pdfParser: PdfParser? = null
 ) {
+    private val log = Logger.withTag("ImportFileProcessor")
+
     /**
      * Process a file and extract transactions.
      *
@@ -25,13 +29,18 @@ class ImportFileProcessor(
      * @return ImportResult with parsed transactions or error
      */
     suspend fun process(filename: String, bytes: ByteArray): ImportResult {
-        val documentType = FormatDetector.detect(filename, bytes)
+        log.d { "process() called: filename=$filename, size=${bytes.size}" }
+        val documentType = formatDetector.detect(filename, bytes)
+        log.d { "Detected type: $documentType" }
 
         return when (documentType) {
             is DocumentType.Csv -> csvParser.parse(bytes.decodeToString(), documentType)
             is DocumentType.Ofx -> ofxParser.parse(bytes.decodeToString(), documentType)
             is DocumentType.Qif -> qifParser.parse(bytes.decodeToString(), documentType)
-            is DocumentType.Pdf -> processPdf(bytes, documentType)
+            is DocumentType.Pdf -> {
+                log.d { "Processing PDF..." }
+                processPdf(bytes, documentType)
+            }
             is DocumentType.Image -> processImage(bytes, documentType)
             is DocumentType.Unknown -> ImportResult.Error(
                 message = "Unknown file format: ${filename.substringAfterLast('.')}",
@@ -45,14 +54,19 @@ class ImportFileProcessor(
         bytes: ByteArray,
         documentType: DocumentType.Pdf
     ): ImportResult {
+        log.d { "processPdf() - pdfParser=${if (pdfParser != null) "available" else "NULL"}" }
         if (pdfParser == null) {
+            log.e { "ERROR: pdfParser is null!" }
             return ImportResult.Error(
                 message = "PDF parsing is not available on this platform",
                 documentType = documentType,
                 partialTransactions = emptyList()
             )
         }
-        return pdfParser.parsePdf(bytes, documentType)
+        log.d { "Calling pdfParser.parsePdf()..." }
+        val result = pdfParser.parsePdf(bytes, documentType)
+        log.d { "pdfParser.parsePdf() returned: ${result::class.simpleName}" }
+        return result
     }
 
     private suspend fun processImage(

@@ -172,4 +172,94 @@ class RuleBasedCategorizerTest {
         assertEquals("tx-1", results[0].transactionId)
         assertEquals("groceries", results[0].categoryId)
     }
+
+    // --- Additional Rule Pattern Tests ---
+
+    @Test
+    fun `matches pension deposit pattern`() {
+        val result = categorizer.categorize("tx-1", "ПЕНСИЯ ЗА ЯНВАРЬ")
+        assertNotNull(result)
+        assertEquals("salary", result.categoryId)
+    }
+
+    @Test
+    fun `matches scholarship pattern`() {
+        val result = categorizer.categorize("tx-1", "СТИПЕНДИЯ УНИВЕРСИТЕТ")
+        assertNotNull(result)
+        assertEquals("salary", result.categoryId)
+    }
+
+    @Test
+    fun `matches dividend pattern`() {
+        val result = categorizer.categorize("tx-1", "ДИВИДЕНДЫ ЗА 2025")
+        assertNotNull(result)
+        assertEquals("salary", result.categoryId)
+    }
+
+    @Test
+    fun `matches refund pattern`() {
+        val result = categorizer.categorize("tx-1", "ВОЗВРАТ СРЕДСТВ")
+        assertNotNull(result)
+        assertEquals("other", result.categoryId)
+    }
+
+    @Test
+    fun `matches cashback pattern`() {
+        val result = categorizer.categorize("tx-1", "КЭШБЭК ЗА ПОКУПКИ")
+        assertNotNull(result)
+        assertEquals("other", result.categoryId)
+    }
+
+    @Test
+    fun `matches cash withdrawal pattern`() {
+        val result = categorizer.categorize("tx-1", "СНЯТИЕ НАЛИЧНЫХ БАНКОМАТ")
+        assertNotNull(result)
+        assertEquals("transfer", result.categoryId)
+    }
+
+    @Test
+    fun `matches bankомат Cyrillic pattern`() {
+        val result = categorizer.categorize("tx-1", "БАНКОМАТ HALYK BANK")
+        assertNotNull(result)
+        assertEquals("transfer", result.categoryId)
+    }
+
+    @Test
+    fun `matches interest pattern`() {
+        val result = categorizer.categorize("tx-1", "ПРОЦЕНТ ПО ДЕПОЗИТУ")
+        assertNotNull(result)
+        assertEquals("other", result.categoryId)
+    }
+
+    // --- User History Edge Cases ---
+
+    @Test
+    fun `user history is case insensitive`() {
+        val userHistory = mapOf(
+            "CUSTOM STORE" to "shopping"
+        )
+        val categorizerWithHistory = RuleBasedCategorizer(
+            merchantDatabase = merchantDatabase,
+            userHistory = userHistory
+        )
+
+        val result = categorizerWithHistory.categorize("tx-1", "custom store almaty")
+        assertNotNull(result)
+        assertEquals("shopping", result.categoryId)
+    }
+
+    @Test
+    fun `user history partial match works`() {
+        val userHistory = mapOf(
+            "SPECIAL" to "entertainment"
+        )
+        val categorizerWithHistory = RuleBasedCategorizer(
+            merchantDatabase = merchantDatabase,
+            userHistory = userHistory
+        )
+
+        val result = categorizerWithHistory.categorize("tx-1", "MY SPECIAL EVENT TICKET")
+        assertNotNull(result)
+        assertEquals("entertainment", result.categoryId)
+    }
 }

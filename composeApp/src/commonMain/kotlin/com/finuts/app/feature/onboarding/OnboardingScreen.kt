@@ -20,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.finuts.app.feature.onboarding.steps.AIModelStep
 import com.finuts.app.feature.onboarding.steps.CompletionStep
 import com.finuts.app.feature.onboarding.steps.CurrencyLanguageStep
 import com.finuts.app.feature.onboarding.steps.FirstAccountStep
@@ -33,6 +34,7 @@ import finuts.composeapp.generated.resources.onboarding_skip
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import co.touchlab.kermit.Logger
 
 /**
  * Main onboarding screen container.
@@ -62,7 +64,13 @@ fun OnboardingScreen(
 
     // Sync pager with viewModel when viewModel changes step (via buttons)
     LaunchedEffect(uiState.currentStepIndex) {
+        Logger.withTag("OnboardingScreen").i {
+            "LaunchedEffect triggered: stepIndex=${uiState.currentStepIndex}, pagerPage=${pagerState.currentPage}"
+        }
         if (pagerState.currentPage != uiState.currentStepIndex) {
+            Logger.withTag("OnboardingScreen").i {
+                "Animating pager to page ${uiState.currentStepIndex}"
+            }
             pagerState.animateScrollToPage(uiState.currentStepIndex)
         }
     }
@@ -93,7 +101,10 @@ fun OnboardingScreen(
                     .padding(horizontal = FinutsSpacing.sm),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                if (uiState.canSkip && uiState.currentStep != OnboardingStep.Completion) {
+                // Hide global Skip on AIModelSetup (has its own skip with context)
+                if (uiState.canSkip &&
+                    uiState.currentStep != OnboardingStep.Completion &&
+                    uiState.currentStep != OnboardingStep.AIModelSetup) {
                     TextButton(onClick = { viewModel.onSkip() }) {
                         Text(text = stringResource(Res.string.onboarding_skip))
                     }
@@ -142,7 +153,18 @@ fun OnboardingScreen(
                         onCreateAccount = { viewModel.createAccount() },
                         onSkip = { viewModel.skipAccountCreation() }
                     )
-                    4 -> CompletionStep(
+                    4 -> AIModelStep(
+                        availableModels = uiState.availableModels,
+                        recommendedModelId = uiState.recommendedModelId,
+                        selectedModelId = uiState.selectedModelId,
+                        downloadProgress = uiState.modelDownloadProgress,
+                        onSelectModel = { viewModel.selectModelId(it) },
+                        onStartDownload = { viewModel.downloadModel() },
+                        onCancelDownload = { viewModel.cancelModelDownload() },
+                        onSkip = { viewModel.skipModelDownload() },
+                        onNext = { viewModel.onModelDownloadComplete() }
+                    )
+                    5 -> CompletionStep(
                         createdAccountName = uiState.createdAccountName,
                         onComplete = { viewModel.completeOnboarding() }
                     )

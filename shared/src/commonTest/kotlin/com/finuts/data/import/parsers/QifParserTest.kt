@@ -7,6 +7,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import com.finuts.data.import.utils.NumberParser
 import kotlin.test.assertTrue
 
 /**
@@ -14,7 +15,7 @@ import kotlin.test.assertTrue
  */
 class QifParserTest {
 
-    private val parser = QifParser()
+    private val parser = QifParser(NumberParser())
 
     @Test
     fun `parse simple QIF with Bank type`() {
@@ -83,7 +84,7 @@ class QifParserTest {
     }
 
     @Test
-    fun `parse negative amount (expense)`() {
+    fun `parse negative amount - expense`() {
         val qif = """
             !Type:Bank
             D01/15/2024
@@ -99,7 +100,7 @@ class QifParserTest {
     }
 
     @Test
-    fun `parse positive amount (income)`() {
+    fun `parse positive amount - income`() {
         val qif = """
             !Type:Bank
             D01/15/2024

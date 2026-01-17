@@ -1,7 +1,7 @@
 package com.finuts.data.import.parsers
 
 import com.finuts.data.import.utils.NumberLocale
-import com.finuts.data.import.utils.NumberParser
+import com.finuts.data.import.utils.NumberParserInterface
 import com.finuts.domain.entity.import.DocumentType
 import com.finuts.domain.entity.import.ImportResult
 import com.finuts.domain.entity.import.ImportSource
@@ -12,7 +12,9 @@ import kotlinx.datetime.LocalDate
  * Parser for QIF (Quicken Interchange Format) files.
  * Handles Bank, CCard, and other account types.
  */
-class QifParser {
+class QifParser(
+    private val numberParser: NumberParserInterface
+) {
 
     /**
      * Parse QIF content and extract transactions.
@@ -134,7 +136,7 @@ class QifParser {
 
     private fun parseAmount(amountStr: String): Long? {
         return try {
-            NumberParser.parse(amountStr.trim(), NumberLocale.AUTO)
+            numberParser.parse(amountStr.trim(), NumberLocale.AUTO)
         } catch (_: Exception) {
             null
         }

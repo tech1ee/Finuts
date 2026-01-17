@@ -274,4 +274,48 @@ class MerchantDatabaseTest {
         val count = database.getAllPatterns().size
         assertTrue(count >= 100, "Expected at least 100 patterns, got $count")
     }
+
+    // --- findMatchForTransaction Tests ---
+
+    @Test
+    fun `findMatchForTransaction returns result with transaction ID`() {
+        val result = database.findMatchForTransaction("tx-123", "MAGNUM ALMATY")
+        assertNotNull(result)
+        assertEquals("tx-123", result.transactionId)
+        assertEquals("groceries", result.categoryId)
+    }
+
+    @Test
+    fun `findMatchForTransaction returns null for unknown merchant`() {
+        val result = database.findMatchForTransaction("tx-456", "UNKNOWN COMPANY")
+        assertNull(result)
+    }
+
+    @Test
+    fun `findMatchForTransaction handles empty description`() {
+        val result = database.findMatchForTransaction("tx-789", "")
+        assertNull(result)
+    }
+
+    // --- getPatternCountByCategory Tests ---
+
+    @Test
+    fun `getPatternCountByCategory returns map of category counts`() {
+        val counts = database.getPatternCountByCategory()
+
+        assertTrue(counts.isNotEmpty())
+        assertTrue(counts.containsKey("groceries"))
+        assertTrue(counts.containsKey("transport"))
+        assertTrue(counts.containsKey("food_delivery"))
+        assertTrue(counts["groceries"]!! > 0)
+    }
+
+    @Test
+    fun `getPatternCountByCategory sums correctly`() {
+        val counts = database.getPatternCountByCategory()
+        val totalFromCounts = counts.values.sum()
+        val totalPatterns = database.getAllPatterns().size
+
+        assertEquals(totalPatterns, totalFromCounts)
+    }
 }

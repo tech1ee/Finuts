@@ -41,10 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.finuts.app.feature.categories.components.CategoryColorPalette
-import com.finuts.app.feature.categories.components.EmojiPickerSheet
 import com.finuts.app.feature.dashboard.utils.hexToColor
+import com.finuts.app.ui.components.pickers.IconPickerSheet
+import com.finuts.app.ui.icons.CategoryIcon
 import com.finuts.app.theme.FinutsColors
 import com.finuts.app.theme.FinutsSpacing
 import com.finuts.app.theme.FinutsTypography
@@ -194,10 +194,11 @@ fun AddEditCategoryScreen(
         }
     }
 
-    // Emoji picker sheet
+    // Icon picker sheet
     if (showEmojiPicker) {
-        EmojiPickerSheet(
-            onEmojiSelected = { viewModel.updateIcon(it) },
+        IconPickerSheet(
+            selectedIcon = formState.icon,
+            onIconSelected = { viewModel.updateIcon(it) },
             onDismiss = { showEmojiPicker = false }
         )
     }
@@ -223,9 +224,10 @@ private fun IconSelector(
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = icon,
-                fontSize = 36.sp
+            CategoryIcon(
+                iconKey = icon,
+                size = 36.dp,
+                tint = iconColor
             )
         }
         Spacer(modifier = Modifier.height(FinutsSpacing.sm))

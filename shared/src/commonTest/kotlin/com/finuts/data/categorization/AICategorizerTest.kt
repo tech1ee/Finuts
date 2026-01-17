@@ -1,170 +1,239 @@
 package com.finuts.data.categorization
 
+import com.finuts.ai.cost.AICostTracker
+import com.finuts.ai.privacy.AnonymizationResult
+import com.finuts.ai.privacy.DetectedPII
+import com.finuts.ai.privacy.PIIAnonymizer
+import com.finuts.ai.providers.ChatMessage
+import com.finuts.ai.providers.CompletionRequest
+import com.finuts.ai.providers.CompletionResponse
+import com.finuts.ai.providers.LLMProvider
+import com.finuts.ai.providers.ModelConfig
 import com.finuts.domain.entity.CategorizationSource
+import com.finuts.domain.registry.IconRegistry
+import com.finuts.test.fakes.FakeCategoryRepository
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for AICategorizer - Tier 2/3 LLM categorization.
- * Uses fake responses for unit tests.
+ * Tests for AICategorizer - Tier 2 cloud LLM categorization.
  */
 class AICategorizerTest {
 
-    // --- Prompt Building ---
+    // === Fake Dependencies ===
 
-    @Test
-    fun `buildPrompt creates valid prompt for single transaction`() {
-        val prompt = AICategorizer.buildPrompt(
-            transactions = listOf(
-                TransactionForCategorization(
-                    id = "tx-1",
-                    description = "COFFEE HOUSE ALMATY",
-                    amount = 150000L
-                )
-            ),
-            categories = listOf("restaurants", "groceries", "shopping")
-        )
+    private class FakeLLMProvider(
+        private val responseContent: String,
+        override val name: String = "test-provider"
+    ) : LLMProvider {
+        override val availableModels: List<ModelConfig> = emptyList()
+        var lastPrompt: String? = null
 
-        assertTrue(prompt.contains("COFFEE HOUSE ALMATY"))
-        assertTrue(prompt.contains("restaurants"))
-        assertTrue(prompt.contains("groceries"))
-        assertTrue(prompt.contains("shopping"))
-    }
+        override suspend fun isAvailable(): Boolean = true
 
-    @Test
-    fun `buildPrompt handles batch of transactions`() {
-        val transactions = (1..5).map { i ->
-            TransactionForCategorization(
-                id = "tx-$i",
-                description = "MERCHANT $i",
-                amount = 10000L * i
+        override suspend fun complete(request: CompletionRequest): CompletionResponse {
+            lastPrompt = request.prompt
+            return CompletionResponse(
+                content = responseContent,
+                inputTokens = 100,
+                outputTokens = 50,
+                model = name
             )
         }
 
-        val prompt = AICategorizer.buildPrompt(
+        override suspend fun chat(messages: List<ChatMessage>): CompletionResponse =
+            complete(CompletionRequest(""))
+
+        override suspend fun structuredOutput(prompt: String, schema: String): CompletionResponse =
+            complete(CompletionRequest(prompt))
+    }
+
+    private class FakePIIAnonymizer : PIIAnonymizer {
+        override fun anonymize(text: String): AnonymizationResult = AnonymizationResult(
+            anonymizedText = text,
+            mapping = emptyMap(),
+            detectedPII = emptyList(),
+            wasModified = false
+        )
+
+        override fun deanonymize(text: String, mapping: Map<String, String>): String = text
+        override fun detectPII(text: String): List<DetectedPII> = emptyList()
+    }
+
+    // === Test Setup ===
+
+    private fun createCategorizer(
+        provider: LLMProvider? = null,
+        costTracker: AICostTracker = AICostTracker()
+    ): AICategorizer {
+        return AICategorizer(
+            provider = provider,
+            categoryRepository = FakeCategoryRepository(),
+            anonymizer = FakePIIAnonymizer(),
+            costTracker = costTracker,
+            iconRegistry = IconRegistry()
+        )
+    }
+
+    // === categorizeTier2 Tests ===
+
+    @Test
+    fun `categorizeTier2 returns null when no provider`() = runTest {
+        val categorizer = createCategorizer(provider = null)
+
+        val result = categorizer.categorizeTier2(
+            transactionId = "tx-1",
+            description = "MAGNUM SUPER ALMATY"
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `categorizeTier2 returns result with valid LLM response`() = runTest {
+        val provider = FakeLLMProvider(
+            responseContent = """{"categoryId":"groceries","confidence":0.95,"isNew":false}"""
+        )
+        val categorizer = createCategorizer(provider = provider)
+
+        val result = categorizer.categorizeTier2(
+            transactionId = "tx-1",
+            description = "MAGNUM SUPER ALMATY"
+        )
+
+        assertNotNull(result)
+        assertEquals("tx-1", result.transactionId)
+        assertEquals("groceries", result.categoryId)
+        assertEquals(0.95f, result.confidence)
+        assertEquals(CategorizationSource.LLM_TIER2, result.source)
+    }
+
+    @Test
+    fun `categorizeTier2 passes description to LLM`() = runTest {
+        val provider = FakeLLMProvider(
+            responseContent = """{"categoryId":"groceries","confidence":0.90}"""
+        )
+        val categorizer = createCategorizer(provider = provider)
+
+        categorizer.categorizeTier2(
+            transactionId = "tx-1",
+            description = "COFFEE HOUSE ALMATY"
+        )
+
+        assertNotNull(provider.lastPrompt)
+        assertTrue(provider.lastPrompt!!.contains("COFFEE HOUSE ALMATY"))
+    }
+
+    @Test
+    fun `categorizeTier2 returns null on malformed JSON`() = runTest {
+        val provider = FakeLLMProvider(responseContent = "invalid json response")
+        val categorizer = createCategorizer(provider = provider)
+
+        val result = categorizer.categorizeTier2(
+            transactionId = "tx-1",
+            description = "SOME MERCHANT"
+        )
+
+        assertNull(result)
+    }
+
+    // === Batch categorizeTier2 Tests ===
+
+    @Test
+    fun `batch categorizeTier2 returns empty when no provider`() = runTest {
+        val categorizer = createCategorizer(provider = null)
+        val transactions = listOf(
+            TransactionForCategorization("tx-1", "MERCHANT A", 10000L)
+        )
+
+        val results = categorizer.categorizeTier2(
+            transactions = transactions,
+            categories = listOf("groceries", "shopping")
+        )
+
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `batch categorizeTier2 returns empty for empty transactions`() = runTest {
+        val provider = FakeLLMProvider(responseContent = "[]")
+        val categorizer = createCategorizer(provider = provider)
+
+        val results = categorizer.categorizeTier2(
+            transactions = emptyList(),
+            categories = listOf("groceries")
+        )
+
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `batch categorizeTier2 parses array response`() = runTest {
+        val provider = FakeLLMProvider(
+            responseContent = """[
+                {"index":0,"categoryId":"groceries","confidence":0.95},
+                {"index":1,"categoryId":"transport","confidence":0.88}
+            ]"""
+        )
+        val categorizer = createCategorizer(provider = provider)
+        val transactions = listOf(
+            TransactionForCategorization("tx-1", "MAGNUM", 5000L),
+            TransactionForCategorization("tx-2", "YANDEX TAXI", 1500L)
+        )
+
+        val results = categorizer.categorizeTier2(
+            transactions = transactions,
+            categories = listOf("groceries", "transport")
+        )
+
+        assertEquals(2, results.size)
+        assertEquals("groceries", results[0].categoryId)
+        assertEquals("transport", results[1].categoryId)
+        assertTrue(results.all { it.source == CategorizationSource.LLM_TIER2 })
+    }
+
+    @Test
+    fun `batch categorizeTier2 handles malformed response gracefully`() = runTest {
+        val provider = FakeLLMProvider(responseContent = "not valid json")
+        val categorizer = createCategorizer(provider = provider)
+        val transactions = listOf(
+            TransactionForCategorization("tx-1", "MERCHANT", 1000L)
+        )
+
+        val results = categorizer.categorizeTier2(
             transactions = transactions,
             categories = listOf("other")
         )
 
-        transactions.forEach { tx ->
-            assertTrue(prompt.contains(tx.description))
-        }
-    }
-
-    @Test
-    fun `buildPrompt formats amount correctly`() {
-        val prompt = AICategorizer.buildPrompt(
-            transactions = listOf(
-                TransactionForCategorization(
-                    id = "tx-1",
-                    description = "TEST",
-                    amount = 150050L // 1500.50 KZT in kopecks
-                )
-            ),
-            categories = listOf("other")
-        )
-
-        assertTrue(prompt.contains("1500.50") || prompt.contains("1500,50"))
-    }
-
-    // --- Response Parsing ---
-
-    @Test
-    fun `parseResponse extracts single categorization`() {
-        val response = """
-            [
-              {"transactionId": "tx-1", "categoryId": "restaurants", "confidence": 0.85}
-            ]
-        """.trimIndent()
-
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER2
-        )
-
-        assertEquals(1, results.size)
-        assertEquals("tx-1", results[0].transactionId)
-        assertEquals("restaurants", results[0].categoryId)
-        assertEquals(0.85f, results[0].confidence)
-        assertEquals(CategorizationSource.LLM_TIER2, results[0].source)
-    }
-
-    @Test
-    fun `parseResponse handles multiple results`() {
-        val response = """
-            [
-              {"transactionId": "tx-1", "categoryId": "restaurants", "confidence": 0.90},
-              {"transactionId": "tx-2", "categoryId": "groceries", "confidence": 0.85},
-              {"transactionId": "tx-3", "categoryId": "transport", "confidence": 0.75}
-            ]
-        """.trimIndent()
-
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER3
-        )
-
-        assertEquals(3, results.size)
-        assertEquals("restaurants", results[0].categoryId)
-        assertEquals("groceries", results[1].categoryId)
-        assertEquals("transport", results[2].categoryId)
-    }
-
-    @Test
-    fun `parseResponse handles empty array`() {
-        val response = "[]"
-
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER2
-        )
-
         assertTrue(results.isEmpty())
     }
 
+    // === isAvailable Tests ===
+
     @Test
-    fun `parseResponse handles malformed JSON gracefully`() {
-        val response = "invalid json"
+    fun `isAvailable returns false when no provider`() = runTest {
+        val categorizer = createCategorizer(provider = null)
 
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER2
-        )
+        val available = categorizer.isAvailable()
 
-        assertTrue(results.isEmpty())
+        assertEquals(false, available)
     }
 
     @Test
-    fun `parseResponse sets correct source for Tier2`() {
-        val response = """
-            [{"transactionId": "tx-1", "categoryId": "other", "confidence": 0.80}]
-        """.trimIndent()
+    fun `isAvailable returns true when provider available`() = runTest {
+        val provider = FakeLLMProvider(responseContent = "")
+        val categorizer = createCategorizer(provider = provider)
 
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER2
-        )
+        val available = categorizer.isAvailable()
 
-        assertEquals(CategorizationSource.LLM_TIER2, results[0].source)
+        assertTrue(available)
     }
 
-    @Test
-    fun `parseResponse sets correct source for Tier3`() {
-        val response = """
-            [{"transactionId": "tx-1", "categoryId": "other", "confidence": 0.80}]
-        """.trimIndent()
-
-        val results = AICategorizer.parseResponse(
-            response = response,
-            tier = CategorizationSource.LLM_TIER3
-        )
-
-        assertEquals(CategorizationSource.LLM_TIER3, results[0].source)
-    }
-
-    // --- TransactionForCategorization ---
+    // === TransactionForCategorization Tests ===
 
     @Test
     fun `TransactionForCategorization stores all fields`() {
@@ -180,27 +249,46 @@ class AICategorizerTest {
     }
 
     @Test
-    fun `TransactionForCategorization formats amount as currency`() {
+    fun `TransactionForCategorization formats positive amount correctly`() {
         val tx = TransactionForCategorization(
             id = "tx-1",
             description = "TEST",
             amount = 123456L // 1234.56
         )
 
-        val formatted = tx.formattedAmount
-        assertNotNull(formatted)
-        assertTrue(formatted.contains("1234"))
+        assertEquals("1234.56", tx.formattedAmount)
     }
-}
 
-/**
- * Data class for transaction to be categorized by AI.
- */
-data class TransactionForCategorization(
-    val id: String,
-    val description: String,
-    val amount: Long
-) {
-    val formattedAmount: String
-        get() = "%.2f".format(amount / 100.0)
+    @Test
+    fun `TransactionForCategorization formats negative amount correctly`() {
+        val tx = TransactionForCategorization(
+            id = "tx-1",
+            description = "TEST",
+            amount = -99999L // -999.99
+        )
+
+        assertEquals("-999.99", tx.formattedAmount)
+    }
+
+    @Test
+    fun `TransactionForCategorization formats zero correctly`() {
+        val tx = TransactionForCategorization(
+            id = "tx-1",
+            description = "TEST",
+            amount = 0L
+        )
+
+        assertEquals("0.00", tx.formattedAmount)
+    }
+
+    @Test
+    fun `TransactionForCategorization formats small amount with padding`() {
+        val tx = TransactionForCategorization(
+            id = "tx-1",
+            description = "TEST",
+            amount = 5L // 0.05
+        )
+
+        assertEquals("0.05", tx.formattedAmount)
+    }
 }

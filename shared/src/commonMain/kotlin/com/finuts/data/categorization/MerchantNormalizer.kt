@@ -13,7 +13,7 @@ package com.finuts.data.categorization
  * 6. Collapse multiple spaces
  * 7. Trim whitespace
  */
-object MerchantNormalizer {
+class MerchantNormalizer : MerchantNormalizerInterface {
 
     // Common business suffixes to remove
     private val businessSuffixes = listOf(
@@ -50,7 +50,7 @@ object MerchantNormalizer {
      * @return Normalized merchant pattern for storage and matching.
      *         Returns original uppercase trimmed name if normalization produces empty string.
      */
-    fun normalize(merchantName: String): String {
+    override fun normalize(merchantName: String): String {
         if (merchantName.isBlank()) return ""
 
         val original = merchantName.uppercase().trim()
@@ -96,7 +96,7 @@ object MerchantNormalizer {
      * @param merchantName Raw or normalized merchant name
      * @return List of key words for matching
      */
-    fun extractKeywords(merchantName: String): List<String> {
+    override fun extractKeywords(merchantName: String): List<String> {
         val normalized = normalize(merchantName)
         if (normalized.isBlank()) return emptyList()
 
@@ -117,7 +117,7 @@ object MerchantNormalizer {
      * @param merchant2 Second merchant name
      * @return True if merchants are likely the same
      */
-    fun isSimilar(merchant1: String, merchant2: String): Boolean {
+    override fun isSimilar(merchant1: String, merchant2: String): Boolean {
         val norm1 = normalize(merchant1)
         val norm2 = normalize(merchant2)
 
@@ -157,7 +157,7 @@ object MerchantNormalizer {
      * @param normalizedName Normalized merchant name
      * @return Pattern string for database storage (SQL LIKE compatible)
      */
-    fun toPattern(normalizedName: String): String {
+    override fun toPattern(normalizedName: String): String {
         if (normalizedName.isBlank()) return ""
 
         val keywords = extractKeywords(normalizedName)

@@ -1,141 +1,264 @@
 package com.finuts.data.categorization
 
-import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage
-import com.aallam.openai.api.chat.ChatRole
-import com.aallam.openai.api.model.ModelId
-import com.aallam.openai.client.OpenAI
+import co.touchlab.kermit.Logger
+import com.finuts.ai.cost.AICostTracker
+import com.finuts.ai.privacy.PIIAnonymizer
+import com.finuts.ai.prompts.BatchCategoryItem
+import com.finuts.ai.prompts.CategorizationPrompt
+import com.finuts.ai.prompts.IndexedDescription
+import com.finuts.ai.prompts.LLMCategoryResponse
+import com.finuts.ai.providers.CompletionRequest
+import com.finuts.ai.providers.LLMProvider
+import com.finuts.domain.entity.Category
 import com.finuts.domain.entity.CategorizationResult
 import com.finuts.domain.entity.CategorizationSource
+import com.finuts.domain.entity.CategoryType
+import com.finuts.domain.registry.IconRegistryProvider
+import com.finuts.domain.repository.CategoryRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * AI-based categorizer for Tier 2 and Tier 3 categorization.
- * Uses OpenAI GPT models via openai-kotlin library.
+ * AI-powered categorizer for Tier 2 (cloud LLM).
+ *
+ * Called when Tier 0 (user learned) and Tier 1 (rules) fail.
+ * Supports both OpenAI and Anthropic providers via LLMProvider interface.
+ *
+ * Privacy-first:
+ * - All descriptions are anonymized before sending to LLM
+ * - No PII ever leaves the device
+ * - Cost is tracked and limited ($0.10/day, $2/month)
  */
-class AICategorizer(
-    private val openAI: OpenAI
+open class AICategorizer(
+    private val provider: LLMProvider?,
+    private val categoryRepository: CategoryRepository,
+    private val anonymizer: PIIAnonymizer,
+    private val costTracker: AICostTracker,
+    private val iconRegistry: IconRegistryProvider
 ) {
+    private val log = Logger.withTag("AICategorizer")
+    private val json = Json { ignoreUnknownKeys = true }
+
     companion object {
-        private const val TIER2_MODEL = "gpt-4o-mini"
-        private const val TIER3_MODEL = "gpt-4o"
         private const val MAX_BATCH_SIZE = 10
-
-        private val json = Json { ignoreUnknownKeys = true }
-
-        /**
-         * Build prompt for batch transaction categorization.
-         */
-        fun buildPrompt(
-            transactions: List<TransactionForCategorization>,
-            categories: List<String>
-        ): String {
-            val txList = transactions.joinToString("\n") { tx ->
-                "- ID: ${tx.id}, Description: \"${tx.description}\", Amount: ${tx.formattedAmount}"
-            }
-
-            return """
-                |You are a financial transaction categorizer.
-                |Categorize each transaction into one of these categories: ${categories.joinToString(", ")}
-                |
-                |Transactions to categorize:
-                |$txList
-                |
-                |Respond with a JSON array of objects with fields:
-                |- transactionId: the transaction ID
-                |- categoryId: the category (from the list above)
-                |- confidence: your confidence (0.0 to 1.0)
-                |
-                |Example response:
-                |[{"transactionId": "tx-1", "categoryId": "groceries", "confidence": 0.85}]
-                |
-                |Respond ONLY with the JSON array, no other text.
-            """.trimMargin()
-        }
-
-        /**
-         * Parse LLM response into categorization results.
-         */
-        fun parseResponse(
-            response: String,
-            tier: CategorizationSource
-        ): List<CategorizationResult> {
-            return try {
-                val jsonArray = json.parseToJsonElement(response).jsonArray
-                jsonArray.map { element ->
-                    val obj = element.jsonObject
-                    CategorizationResult(
-                        transactionId = obj["transactionId"]?.jsonPrimitive?.content ?: "",
-                        categoryId = obj["categoryId"]?.jsonPrimitive?.content ?: "other",
-                        confidence = obj["confidence"]?.jsonPrimitive?.content?.toFloatOrNull()
-                            ?: 0.5f,
-                        source = tier
-                    )
-                }
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
     }
 
     /**
-     * Categorize transactions using Tier 2 (GPT-4o-mini).
-     * More cost-effective, suitable for most transactions.
+     * Categorize a single transaction using LLM.
+     *
+     * @param transactionId Transaction ID
+     * @param description Original (non-anonymized) transaction description
+     * @return CategorizationResult or null if failed/unavailable
      */
     suspend fun categorizeTier2(
-        transactions: List<TransactionForCategorization>,
-        categories: List<String>
-    ): List<CategorizationResult> {
-        return categorize(transactions, categories, TIER2_MODEL, CategorizationSource.LLM_TIER2)
+        transactionId: String,
+        description: String
+    ): CategorizationResult? {
+        if (provider == null) {
+            log.d { "categorizeTier2: No LLM provider available" }
+            return null
+        }
+
+        // Check cost budget
+        if (!costTracker.canExecute(estimateCost())) {
+            log.w { "categorizeTier2: Cost budget exceeded" }
+            return null
+        }
+
+        try {
+            // Anonymize description before sending
+            val anonymizedResult = anonymizer.anonymize(description)
+            val anonymized = anonymizedResult.anonymizedText
+            log.d { "categorizeTier2: anonymized='$anonymized'" }
+
+            // Get existing categories
+            val existingCategories = categoryRepository.getAllCategories()
+                .first()
+                .map { it.id }
+
+            // Build prompt
+            val prompt = CategorizationPrompt.buildCategorizePrompt(
+                description = anonymized,
+                existingCategories = existingCategories
+            )
+
+            // Call LLM
+            val response = provider.complete(
+                CompletionRequest(
+                    prompt = prompt,
+                    maxTokens = 256,
+                    temperature = 0.1f
+                )
+            )
+
+            // Track cost
+            costTracker.record(
+                inputTokens = response.inputTokens,
+                outputTokens = response.outputTokens,
+                model = response.model
+            )
+
+            // Parse response
+            val result = parseResponse(response.content)
+            if (result == null) {
+                log.w { "categorizeTier2: Failed to parse LLM response" }
+                return null
+            }
+
+            // If new category suggested, create it
+            if (result.isNew && result.newCategoryMetadata != null) {
+                createNewCategory(result.categoryId, result.newCategoryMetadata)
+            }
+
+            return CategorizationResult(
+                transactionId = transactionId,
+                categoryId = result.categoryId,
+                confidence = result.confidence,
+                source = CategorizationSource.LLM_TIER2
+            )
+        } catch (e: Exception) {
+            log.e(e) { "categorizeTier2: failed - ${e.message}" }
+            return null
+        }
     }
 
     /**
-     * Categorize transactions using Tier 3 (GPT-4o).
-     * More expensive but higher accuracy for complex cases.
+     * Batch categorize multiple transactions (more efficient for import).
+     *
+     * @param transactions List of transactions to categorize
+     * @param categories Available category IDs
+     * @return List of CategorizationResults
      */
-    suspend fun categorizeTier3(
+    open suspend fun categorizeTier2(
         transactions: List<TransactionForCategorization>,
         categories: List<String>
     ): List<CategorizationResult> {
-        return categorize(transactions, categories, TIER3_MODEL, CategorizationSource.LLM_TIER3)
-    }
+        if (provider == null || transactions.isEmpty()) {
+            return emptyList()
+        }
 
-    private suspend fun categorize(
-        transactions: List<TransactionForCategorization>,
-        categories: List<String>,
-        model: String,
-        source: CategorizationSource
-    ): List<CategorizationResult> {
-        if (transactions.isEmpty()) return emptyList()
+        val batchCost = estimateCost() * transactions.size
+        if (!costTracker.canExecute(batchCost)) {
+            log.w { "categorizeBatch: Cost budget exceeded for ${transactions.size}" }
+            return emptyList()
+        }
 
         val batches = transactions.chunked(MAX_BATCH_SIZE)
         val results = mutableListOf<CategorizationResult>()
 
         for (batch in batches) {
-            val prompt = buildPrompt(batch, categories)
-            val response = callOpenAI(prompt, model)
-            results.addAll(parseResponse(response, source))
+            try {
+                val indexed = batch.mapIndexed { index, tx ->
+                    IndexedDescription(index, anonymizer.anonymize(tx.description).anonymizedText)
+                }
+
+                val prompt = CategorizationPrompt.buildBatchCategorizePrompt(
+                    descriptions = indexed,
+                    existingCategories = categories
+                )
+
+                val response = provider.complete(
+                    CompletionRequest(
+                        prompt = prompt,
+                        maxTokens = 1024,
+                        temperature = 0.1f
+                    )
+                )
+
+                costTracker.record(
+                    inputTokens = response.inputTokens,
+                    outputTokens = response.outputTokens,
+                    model = response.model
+                )
+
+                val batchResults = parseBatchResponse(response.content)
+                batchResults.forEach { item ->
+                    val tx = batch.getOrNull(item.index)
+                    if (tx != null) {
+                        results.add(
+                            CategorizationResult(
+                                transactionId = tx.id,
+                                categoryId = item.categoryId,
+                                confidence = item.confidence,
+                                source = CategorizationSource.LLM_TIER2
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                log.e(e) { "categorizeBatch: Failed batch - ${e.message}" }
+            }
         }
 
         return results
     }
 
-    private suspend fun callOpenAI(prompt: String, model: String): String {
-        val request = ChatCompletionRequest(
-            model = ModelId(model),
-            messages = listOf(
-                ChatMessage(
-                    role = ChatRole.User,
-                    content = prompt
-                )
-            ),
-            temperature = 0.1
-        )
+    /**
+     * Check if AI categorization is available.
+     */
+    suspend fun isAvailable(): Boolean {
+        return provider?.isAvailable() == true && costTracker.canExecute(estimateCost())
+    }
 
-        val completion = openAI.chatCompletion(request)
-        return completion.choices.firstOrNull()?.message?.content ?: "[]"
+    private fun parseResponse(content: String): LLMCategoryResponse? {
+        return try {
+            val jsonContent = content
+                .replace("```json", "")
+                .replace("```", "")
+                .trim()
+
+            json.decodeFromString<LLMCategoryResponse>(jsonContent)
+        } catch (e: Exception) {
+            log.e(e) { "parseResponse: Failed to parse - $content" }
+            null
+        }
+    }
+
+    private fun parseBatchResponse(content: String): List<BatchCategoryItem> {
+        return try {
+            val jsonContent = content
+                .replace("```json", "")
+                .replace("```", "")
+                .trim()
+
+            json.decodeFromString<List<BatchCategoryItem>>(jsonContent)
+        } catch (e: Exception) {
+            log.e(e) { "parseBatchResponse: Failed to parse - $content" }
+            emptyList()
+        }
+    }
+
+    private suspend fun createNewCategory(
+        categoryId: String,
+        metadata: com.finuts.ai.prompts.NewCategoryMetadata
+    ) {
+        try {
+            val existing = categoryRepository.getCategoryById(categoryId).first()
+            if (existing != null) return
+
+            val icon = iconRegistry.findBestMatch(metadata.iconHint)
+
+            val category = Category(
+                id = categoryId,
+                name = metadata.name,
+                icon = icon,
+                color = metadata.color,
+                type = CategoryType.EXPENSE,
+                parentId = null,
+                isDefault = false,
+                sortOrder = 999
+            )
+
+            categoryRepository.createCategory(category)
+            log.i { "createNewCategory: Created '$categoryId' with icon='$icon'" }
+        } catch (e: Exception) {
+            log.e(e) { "createNewCategory: Failed for '$categoryId'" }
+        }
+    }
+
+    private fun estimateCost(): Float {
+        val inputCost = 200 * 0.001f / 1000
+        val outputCost = 50 * 0.005f / 1000
+        return inputCost + outputCost
     }
 }

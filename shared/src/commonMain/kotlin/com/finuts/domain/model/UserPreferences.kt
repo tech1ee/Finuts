@@ -11,7 +11,15 @@ data class UserPreferences(
     val notificationsEnabled: Boolean = true,
     val biometricEnabled: Boolean = false,
     val onboardingCompleted: Boolean = false,
-    val userGoal: UserGoal = UserGoal.NOT_SET
+    val userGoal: UserGoal = UserGoal.NOT_SET,
+
+    // AI Features
+    /** Whether AI auto-categorization is enabled */
+    val aiCategorizationEnabled: Boolean = true,
+    /** Currently selected AI model ID (null if none) */
+    val selectedModelId: String? = null,
+    /** Whether user downloaded AI model during onboarding */
+    val aiModelDownloadedInOnboarding: Boolean = false
 )
 
 /**

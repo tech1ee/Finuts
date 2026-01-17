@@ -1,5 +1,6 @@
 package com.finuts.app.feature.dashboard
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,9 @@ import com.finuts.app.feature.dashboard.components.AccountsCarousel
 import com.finuts.app.feature.dashboard.utils.formatMoney
 import com.finuts.app.feature.dashboard.utils.hexToColor
 import com.finuts.app.theme.FinutsSpacing
+import com.finuts.app.ui.components.navigation.FinutsTopBar
+import com.finuts.app.ui.components.navigation.TopBarAction
+import com.finuts.app.ui.icons.FinutsIcons
 import com.finuts.app.ui.components.cards.CategorySpending
 import com.finuts.app.ui.components.cards.CategorySpendingList
 import com.finuts.app.ui.components.cards.FirstTransactionPromptCard
@@ -50,6 +54,7 @@ fun DashboardContent(
     onSeeAllAccounts: () -> Unit,
     onAddTransaction: () -> Unit,
     onCreateBudget: () -> Unit,
+    onImportClick: () -> Unit,
     onSend: () -> Unit,
     onReceive: () -> Unit,
     onHistory: () -> Unit,
@@ -70,14 +75,26 @@ fun DashboardContent(
         }
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = FinutsSpacing.md,
-            bottom = FinutsSpacing.bottomNavHeight + FinutsSpacing.lg
+    Column(modifier = modifier.fillMaxSize()) {
+        FinutsTopBar(
+            title = "Dashboard",
+            actions = {
+                TopBarAction(
+                    icon = FinutsIcons.Import,
+                    contentDescription = "Import",
+                    onClick = onImportClick
+                )
+            }
         )
-    ) {
-        // Hero Balance Card
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = FinutsSpacing.md,
+                bottom = FinutsSpacing.bottomNavHeight + FinutsSpacing.lg
+            )
+        ) {
+            // Hero Balance Card
         item {
             BalanceHeroCard(
                 balance = formatMoney(totalBalance, currencySymbol),
@@ -171,6 +188,7 @@ fun DashboardContent(
                 onAddTransaction = onAddTransaction,
                 modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
             )
+        }
         }
     }
 }

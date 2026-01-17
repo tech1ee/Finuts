@@ -7,6 +7,8 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import com.finuts.data.import.utils.DateParser
+import com.finuts.data.import.utils.NumberParser
 import kotlin.test.assertTrue
 
 /**
@@ -14,7 +16,7 @@ import kotlin.test.assertTrue
  */
 class CsvParserTest {
 
-    private val parser = CsvParser()
+    private val parser = CsvParser(DateParser(), NumberParser())
 
     @Test
     fun `parse simple CSV with header`() {

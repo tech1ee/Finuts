@@ -1,5 +1,6 @@
 package com.finuts.data.categorization
 
+import co.touchlab.kermit.Logger
 import com.finuts.domain.entity.CategorizationResult
 import com.finuts.domain.entity.CategorizationSource
 
@@ -11,6 +12,7 @@ class RuleBasedCategorizer(
     private val merchantDatabase: MerchantDatabase,
     private val userHistory: Map<String, String> = emptyMap()
 ) {
+    private val log = Logger.withTag("RuleBasedCategorizer")
     companion object {
         private const val USER_HISTORY_CONFIDENCE = 0.92f
         private const val RULE_BASED_CONFIDENCE = 0.88f
@@ -43,20 +45,43 @@ class RuleBasedCategorizer(
      */
     fun categorize(transactionId: String, description: String): CategorizationResult? {
         val trimmed = description.trim()
-        if (trimmed.isBlank()) return null
+        log.d { "categorize: txId=$transactionId, desc='${trimmed.take(40)}'" }
 
-        // 1. Check merchant database first (highest accuracy)
-        merchantDatabase.findMatchForTransaction(transactionId, trimmed)?.let {
-            return it
+        if (trimmed.isBlank()) {
+            log.d { "categorize: SKIP - empty description" }
+            return null
         }
 
+        // 1. Check merchant database first (highest accuracy)
+        merchantDatabase.findMatchForTransaction(transactionId, trimmed)?.let { result ->
+            log.i {
+                "categorize: MERCHANT_DB_MATCH txId=$transactionId, " +
+                    "category=${result.categoryId}, conf=${result.confidence}"
+            }
+            return result
+        }
+        log.d { "categorize: no merchant DB match" }
+
         // 2. Check user history
-        findInUserHistory(transactionId, trimmed)?.let {
-            return it
+        findInUserHistory(transactionId, trimmed)?.let { result ->
+            log.i {
+                "categorize: USER_HISTORY_MATCH txId=$transactionId, " +
+                    "category=${result.categoryId}"
+            }
+            return result
         }
 
         // 3. Apply regex rules
-        return applyRulePatterns(transactionId, trimmed)
+        val ruleResult = applyRulePatterns(transactionId, trimmed)
+        if (ruleResult != null) {
+            log.i {
+                "categorize: RULE_MATCH txId=$transactionId, " +
+                    "category=${ruleResult.categoryId}, conf=${ruleResult.confidence}"
+            }
+        } else {
+            log.d { "categorize: NO_TIER1_MATCH txId=$transactionId" }
+        }
+        return ruleResult
     }
 
     private fun findInUserHistory(

@@ -26,7 +26,7 @@ import com.finuts.data.local.entity.TransactionEntity
         CategoryCorrectionEntity::class,
         LearnedMerchantEntity::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = true
 )
 @ConstructedBy(FinutsDatabaseConstructor::class)

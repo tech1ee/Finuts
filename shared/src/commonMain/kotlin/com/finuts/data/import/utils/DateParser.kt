@@ -6,7 +6,7 @@ import kotlinx.datetime.LocalDate
  * Multi-format date parser for bank statements.
  * Handles various date formats used across different banks and regions.
  */
-object DateParser {
+class DateParser : DateParserInterface {
 
     private val RUSSIAN_MONTHS = mapOf(
         // Nominative
@@ -47,7 +47,7 @@ object DateParser {
      * @return Parsed LocalDate
      * @throws DateParseException if the string cannot be parsed
      */
-    fun parse(text: String, format: DateFormat = DateFormat.AUTO): LocalDate {
+    override fun parse(text: String, format: DateFormat): LocalDate {
         val trimmed = text.trim()
 
         if (trimmed.isEmpty()) {
@@ -70,7 +70,7 @@ object DateParser {
      * @param format The expected date format (default: AUTO)
      * @return Parsed LocalDate or null if parsing fails
      */
-    fun parseOrNull(text: String, format: DateFormat = DateFormat.AUTO): LocalDate? {
+    override fun parseOrNull(text: String, format: DateFormat): LocalDate? {
         return try {
             parse(text, format)
         } catch (_: DateParseException) {
@@ -84,7 +84,7 @@ object DateParser {
      * @param text Sample date string
      * @return Detected format
      */
-    fun detectFormat(text: String): DateFormat {
+    override fun detectFormat(text: String): DateFormat {
         val trimmed = text.trim()
 
         // Check ISO format first (YYYY-MM-DD)

@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1C81D6F669B7BB6D2FFCCEB3 /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 4CFD0E4390D7E54F7FCDA1C0 /* LLM */; };
 		484125E45A5515240B164C28 /* FinutsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3195F525B89DC32071E84A /* FinutsApp.swift */; };
 		4DCD786C7C96E1B3889D14C1 /* composeApp.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51F8BB0AC90CDF9C10EBA447 /* composeApp.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		56B0305B5D3847FC6B326502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8509E5A49E4A5CAAEB3ADB /* ContentView.swift */; };
+		64A378BEE7416583D6893341 /* SwiftLLMBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9D793DE96FCCD1D236066E /* SwiftLLMBridge.swift */; };
 		E7E233966B6F81E174B1288F /* composeApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 51F8BB0AC90CDF9C10EBA447 /* composeApp.framework */; };
 /* End PBXBuildFile section */
 
@@ -27,26 +29,10 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		COPY_COMPOSE_RESOURCES /* Copy Compose Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Copy Compose Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Copy Compose Multiplatform resources to app bundle\nRESOURCE_SRC=\"$SRCROOT/../composeApp/build/generated/compose/resourceGenerator/preparedResources/commonMain/composeResources\"\nRESOURCE_DST=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/compose-resources/composeResources/finuts.composeapp.generated.resources\"\n\nif [ -d \"$RESOURCE_SRC\" ]; then\n    mkdir -p \"$RESOURCE_DST\"\n    cp -R \"$RESOURCE_SRC/\" \"$RESOURCE_DST/\"\n    echo \"Copied Compose resources to $RESOURCE_DST\"\nelse\n    echo \"Warning: Compose resources not found at $RESOURCE_SRC\"\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXFileReference section */
 		51F8BB0AC90CDF9C10EBA447 /* composeApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = composeApp.framework; path = ../composeApp/build/bin/iosSimulatorArm64/debugFramework/composeApp.framework; sourceTree = "<group>"; };
 		86038AE1032E284E79B32AD6 /* iosApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C9D793DE96FCCD1D236066E /* SwiftLLMBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftLLMBridge.swift; sourceTree = "<group>"; };
 		AA3195F525B89DC32071E84A /* FinutsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinutsApp.swift; sourceTree = "<group>"; };
 		C117AD187833E2513BD2F553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CE8509E5A49E4A5CAAEB3ADB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -58,6 +44,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E7E233966B6F81E174B1288F /* composeApp.framework in Frameworks */,
+				1C81D6F669B7BB6D2FFCCEB3 /* LLM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +57,7 @@
 				CE8509E5A49E4A5CAAEB3ADB /* ContentView.swift */,
 				AA3195F525B89DC32071E84A /* FinutsApp.swift */,
 				C117AD187833E2513BD2F553 /* Info.plist */,
+				EED88E095FBF99EF7CA68F08 /* LLMBridge */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -99,6 +87,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		EED88E095FBF99EF7CA68F08 /* LLMBridge */ = {
+			isa = PBXGroup;
+			children = (
+				9C9D793DE96FCCD1D236066E /* SwiftLLMBridge.swift */,
+			);
+			path = LLMBridge;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -106,10 +102,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 29DCA9F0B3A40325067EB163 /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
+				6A42F74FB35331E793298FD1 /* Copy Compose Resources */,
 				297B59D9CE634556D6007C40 /* Sources */,
 				EF8A6E9BFD470986D9D5C9B5 /* Frameworks */,
 				DB76241340C08196BD9C492C /* Embed Frameworks */,
-				COPY_COMPOSE_RESOURCES /* Copy Compose Resources */,
 			);
 			buildRules = (
 			);
@@ -117,6 +113,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				4CFD0E4390D7E54F7FCDA1C0 /* LLM */,
 			);
 			productName = iosApp;
 			productReference = 86038AE1032E284E79B32AD6 /* iosApp.app */;
@@ -146,6 +143,9 @@
 			);
 			mainGroup = 38B69C3F79CD97858CF7B609;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D2EF8108A32FE9A39287D8BA /* XCRemoteSwiftPackageReference "LLM.swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
@@ -155,6 +155,28 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		6A42F74FB35331E793298FD1 /* Copy Compose Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Compose Resources";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Copy Compose Multiplatform resources to app bundle\nRESOURCES_SRC=\"${SRCROOT}/../composeApp/build/generated/compose/resourceGenerator/preparedResources/commonMain/composeResources\"\nRESOURCES_DST=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/compose-resources/composeResources/finuts.composeapp.generated.resources\"\n\nif [ -d \"$RESOURCES_SRC\" ]; then\n  echo \"Copying Compose resources from $RESOURCES_SRC to $RESOURCES_DST\"\n  mkdir -p \"$RESOURCES_DST\"\n  cp -R \"$RESOURCES_SRC\"/* \"$RESOURCES_DST/\"\n  echo \"Compose resources copied successfully\"\nelse\n  echo \"Warning: Compose resources not found at $RESOURCES_SRC\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		297B59D9CE634556D6007C40 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -162,6 +184,7 @@
 			files = (
 				56B0305B5D3847FC6B326502 /* ContentView.swift in Sources */,
 				484125E45A5515240B164C28 /* FinutsApp.swift in Sources */,
+				64A378BEE7416583D6893341 /* SwiftLLMBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,6 +394,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D2EF8108A32FE9A39287D8BA /* XCRemoteSwiftPackageReference "LLM.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eastriverlee/LLM.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4CFD0E4390D7E54F7FCDA1C0 /* LLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D2EF8108A32FE9A39287D8BA /* XCRemoteSwiftPackageReference "LLM.swift" */;
+			productName = LLM;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 242FB5348943441C388468CE /* Project object */;
 }

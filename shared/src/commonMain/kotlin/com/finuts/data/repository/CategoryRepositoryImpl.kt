@@ -52,20 +52,23 @@ class CategoryRepositoryImpl(
     }
 
     private fun getDefaultCategoriesList(): List<CategoryEntity> = listOf(
-        // Expense categories
-        CategoryEntity("food", "Food & Dining", "restaurant", "#4CAF50", "EXPENSE", null, true, 1),
-        CategoryEntity("transport", "Transport", "directions_car", "#2196F3", "EXPENSE", null, true, 2),
-        CategoryEntity("shopping", "Shopping", "shopping_bag", "#9C27B0", "EXPENSE", null, true, 3),
-        CategoryEntity("utilities", "Utilities", "power", "#FF9800", "EXPENSE", null, true, 4),
-        CategoryEntity("health", "Health", "medical_services", "#F44336", "EXPENSE", null, true, 5),
-        CategoryEntity("entertainment", "Entertainment", "sports_esports", "#E91E63", "EXPENSE", null, true, 6),
-        CategoryEntity("education", "Education", "school", "#3F51B5", "EXPENSE", null, true, 7),
-        CategoryEntity("housing", "Housing", "home", "#795548", "EXPENSE", null, true, 8),
+        // Expense categories - IDs must match MerchantDatabase patterns
+        CategoryEntity("groceries", "Groceries", "shopping_cart", "#4CAF50", "EXPENSE", null, true, 1),
+        CategoryEntity("food_delivery", "Food Delivery", "delivery_dining", "#8BC34A", "EXPENSE", null, true, 2),
+        CategoryEntity("transport", "Transport", "directions_car", "#2196F3", "EXPENSE", null, true, 3),
+        CategoryEntity("shopping", "Shopping", "shopping_bag", "#9C27B0", "EXPENSE", null, true, 4),
+        CategoryEntity("utilities", "Utilities", "power", "#FF9800", "EXPENSE", null, true, 5),
+        CategoryEntity("healthcare", "Healthcare", "medical_services", "#F44336", "EXPENSE", null, true, 6),
+        CategoryEntity("entertainment", "Entertainment", "sports_esports", "#E91E63", "EXPENSE", null, true, 7),
+        CategoryEntity("education", "Education", "school", "#3F51B5", "EXPENSE", null, true, 8),
+        CategoryEntity("housing", "Housing", "home", "#795548", "EXPENSE", null, true, 9),
+        CategoryEntity("transfer", "Transfers", "swap_horiz", "#607D8B", "EXPENSE", null, true, 10),
+        CategoryEntity("other", "Other", "more_horiz", "#9E9E9E", "EXPENSE", null, true, 11),
         // Income categories
-        CategoryEntity("salary", "Salary", "work", "#4CAF50", "INCOME", null, true, 9),
-        CategoryEntity("freelance", "Freelance", "computer", "#00BCD4", "INCOME", null, true, 10),
-        CategoryEntity("investments", "Investments", "trending_up", "#8BC34A", "INCOME", null, true, 11),
-        CategoryEntity("gifts", "Gifts", "card_giftcard", "#FF5722", "INCOME", null, true, 12),
-        CategoryEntity("other_income", "Other Income", "attach_money", "#607D8B", "INCOME", null, true, 13)
+        CategoryEntity("salary", "Salary", "work", "#4CAF50", "INCOME", null, true, 12),
+        CategoryEntity("freelance", "Freelance", "computer", "#00BCD4", "INCOME", null, true, 13),
+        CategoryEntity("investments", "Investments", "trending_up", "#8BC34A", "INCOME", null, true, 14),
+        CategoryEntity("gifts", "Gifts", "card_giftcard", "#FF5722", "INCOME", null, true, 15),
+        CategoryEntity("other_income", "Other Income", "attach_money", "#607D8B", "INCOME", null, true, 16)
     )
 }

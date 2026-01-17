@@ -35,27 +35,8 @@ import com.finuts.app.theme.FinutsTypography
 import com.finuts.app.ui.icons.getAccountIcon
 
 /**
- * Account Card Component - Sophisticated Minimalism
- *
- * Design: Linear/Copilot Money style
- *
- * Layout:
- * ┌──┬──────────────────────────┐
- * │  │ [icon]  Cash              │  ← Logo + Name
- * │██│         CASH              │  ← Type, muted
- * │  │                           │
- * │  │ ₸35,000.00                │  ← headline, primary
- * │  │ Available                 │  ← bodySmall, tertiary
- * └──┴──────────────────────────┘
- *
- * Calculated Specs (from DESIGN_SYSTEM.md):
- * - Width: 172dp (shows 2 cards + peek in carousel)
- * - Height: 128dp (golden ratio: 172 ÷ 1.34)
- * - Left accent: 4dp colored bar
- * - Corner radius: 12dp
- * - Logo: 32dp × 32dp
- * - Internal padding: 16dp
- * - Press: scale 0.98
+ * Compact Account Card (172x128dp) for carousel display.
+ * Design: Linear/Copilot Money style with accent bar.
  */
 
 private val CardShape = RoundedCornerShape(FinutsSpacing.accountCardRadius)
@@ -71,6 +52,31 @@ enum class AccountType {
     SAVINGS,
     INVESTMENT
 }
+
+/**
+ * Returns color index for account type accent color.
+ * 0=Accent(CASH), 1=Transfer(DEBIT), 2=Expense(CREDIT), 3=Income(SAVINGS), 4=Tertiary(INVEST)
+ */
+fun accountTypeToAccentColorIndex(type: AccountType): Int = type.ordinal
+
+/**
+ * Formats account type name for display (replaces underscores with spaces).
+ */
+fun formatAccountTypeName(name: String): String = name.replace("_", " ")
+
+/** Ordered accent colors by AccountType ordinal. */
+private val AccentColors
+    @Composable get() = listOf(
+        FinutsColors.Accent,    // CASH
+        FinutsColors.Transfer,  // DEBIT_CARD
+        FinutsColors.Expense,   // CREDIT_CARD
+        FinutsColors.Income,    // SAVINGS
+        FinutsColors.Tertiary   // INVESTMENT
+    )
+
+/** Get accent color for account type. */
+@Composable
+private fun getAccentColor(type: AccountType) = AccentColors[accountTypeToAccentColorIndex(type)]
 
 @Composable
 fun AccountCard(
@@ -91,13 +97,7 @@ fun AccountCard(
         label = "cardScale"
     )
 
-    val accentColor = when (type) {
-        AccountType.CASH -> FinutsColors.Accent
-        AccountType.DEBIT_CARD -> FinutsColors.Transfer
-        AccountType.CREDIT_CARD -> FinutsColors.Expense
-        AccountType.SAVINGS -> FinutsColors.Income
-        AccountType.INVESTMENT -> FinutsColors.Tertiary
-    }
+    val accentColor = getAccentColor(type)
 
     Box(
         modifier = modifier
@@ -162,7 +162,7 @@ fun AccountCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = type.name.replace("_", " "),
+                        text = formatAccountTypeName(type.name),
                         style = FinutsTypography.bodySmall,
                         color = FinutsColors.TextTertiary
                     )
@@ -189,120 +189,6 @@ fun AccountCard(
     }
 }
 
-/**
- * Full-width Account Card for vertical lists
- *
- * Specs: 64dp height, 4dp accent bar, 40dp icon, 12dp icon-to-text gap
- */
-@Composable
-fun AccountListItem(
-    name: String,
-    type: AccountType,
-    balance: String,
-    balanceLabel: String = "Available",
-    logoContent: @Composable () -> Unit = { DefaultBankLogo(type) },
-    onClick: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) FinutsMotion.listItemPressScale else 1f,
-        animationSpec = FinutsMotion.microTween(),
-        label = "listItemScale"
-    )
-
-    val accentColor = when (type) {
-        AccountType.CASH -> FinutsColors.Accent
-        AccountType.DEBIT_CARD -> FinutsColors.Transfer
-        AccountType.CREDIT_CARD -> FinutsColors.Expense
-        AccountType.SAVINGS -> FinutsColors.Income
-        AccountType.INVESTMENT -> FinutsColors.Tertiary
-    }
-
-    Box(
-        modifier = modifier
-            .height(FinutsSpacing.transactionItemHeight)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(CardShape)
-            .background(FinutsColors.Surface)
-            .border(
-                width = 1.dp,
-                color = FinutsColors.Border,
-                shape = CardShape
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-    ) {
-        // Accent bar on left (4dp)
-        Box(
-            modifier = Modifier
-                .width(FinutsSpacing.accountAccentBarWidth)
-                .fillMaxHeight()
-                .clip(AccentBarShape)
-                .background(accentColor)
-        )
-
-        // Content - horizontal layout for list
-        Row(
-            modifier = Modifier
-                .padding(start = FinutsSpacing.accountAccentBarWidth)
-                .padding(FinutsSpacing.cardPadding),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Logo (40dp)
-            Box(
-                modifier = Modifier
-                    .size(FinutsSpacing.transactionIconSize)
-                    .clip(RoundedCornerShape(FinutsSpacing.transactionIconRadius))
-                    .background(FinutsColors.SurfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                logoContent()
-            }
-
-            Spacer(modifier = Modifier.width(FinutsSpacing.iconToTextGap))
-
-            // Name and type
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = FinutsTypography.titleMedium,
-                    color = FinutsColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = type.name.replace("_", " "),
-                    style = FinutsTypography.bodySmall,
-                    color = FinutsColors.TextTertiary
-                )
-            }
-
-            // Balance on right
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = balance,
-                    style = FinutsMoneyTypography.title,
-                    color = FinutsColors.TextPrimary
-                )
-                Text(
-                    text = balanceLabel,
-                    style = FinutsTypography.bodySmall,
-                    color = FinutsColors.TextTertiary
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun DefaultBankLogo(type: AccountType) {
     Icon(
@@ -310,33 +196,5 @@ private fun DefaultBankLogo(type: AccountType) {
         contentDescription = type.name,
         modifier = Modifier.size(20.dp),
         tint = FinutsColors.TextSecondary
-    )
-}
-
-// ============================================================
-// LEGACY SUPPORT
-// ============================================================
-
-/**
- * Legacy AccountCard for backward compatibility
- */
-@Composable
-fun AccountCard(
-    bankName: String,
-    accountNumber: String,
-    balance: String,
-    balanceLabel: String = "Available",
-    logoContent: @Composable () -> Unit = { DefaultBankLogo(AccountType.CASH) },
-    onClick: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    AccountCard(
-        name = bankName,
-        type = AccountType.CASH,
-        balance = balance,
-        balanceLabel = balanceLabel,
-        logoContent = logoContent,
-        onClick = onClick,
-        modifier = modifier
     )
 }

@@ -1,5 +1,6 @@
 package com.finuts.domain.usecase
 
+import co.touchlab.kermit.Logger
 import com.finuts.data.import.FuzzyDuplicateDetector
 import com.finuts.data.import.ImportValidator
 import com.finuts.domain.entity.Transaction
@@ -30,8 +31,11 @@ class ImportTransactionsUseCase(
     private val transactionRepository: TransactionRepository,
     private val duplicateDetector: FuzzyDuplicateDetector,
     private val validator: ImportValidator,
-    private val categorizationUseCase: CategorizePendingTransactionsUseCase
+    private val categorizationUseCase: CategorizePendingTransactionsUseCase,
+    private val categoryResolver: CategoryResolver
 ) {
+    private val log = Logger.withTag("ImportTransactionsUseCase")
+
     private val _progress = MutableStateFlow<ImportProgress>(ImportProgress.Idle)
     val progress: StateFlow<ImportProgress> = _progress.asStateFlow()
 
@@ -48,19 +52,27 @@ class ImportTransactionsUseCase(
         parseResult: ImportResult,
         targetAccountId: String
     ): Result<ImportPreviewResult> {
+        log.i { "startImport: parseResult=${parseResult::class.simpleName}, targetAccountId=$targetAccountId" }
         return when (parseResult) {
-            is ImportResult.Success -> processSuccessResult(parseResult, targetAccountId)
-            is ImportResult.Error -> Result.failure(
-                ImportException(parseResult.message)
-            )
-            is ImportResult.NeedsUserInput -> processSuccessResult(
-                ImportResult.Success(
-                    transactions = parseResult.transactions,
-                    documentType = parseResult.documentType,
-                    totalConfidence = 0.5f
-                ),
-                targetAccountId
-            )
+            is ImportResult.Success -> {
+                log.d { "startImport: Success with ${parseResult.transactions.size} transactions" }
+                processSuccessResult(parseResult, targetAccountId)
+            }
+            is ImportResult.Error -> {
+                log.e { "startImport: Error - ${parseResult.message}" }
+                Result.failure(ImportException(parseResult.message))
+            }
+            is ImportResult.NeedsUserInput -> {
+                log.d { "startImport: NeedsUserInput with ${parseResult.transactions.size} transactions" }
+                processSuccessResult(
+                    ImportResult.Success(
+                        transactions = parseResult.transactions,
+                        documentType = parseResult.documentType,
+                        totalConfidence = 0.5f
+                    ),
+                    targetAccountId
+                )
+            }
         }
     }
 
@@ -68,20 +80,24 @@ class ImportTransactionsUseCase(
         parseResult: ImportResult.Success,
         targetAccountId: String
     ): Result<ImportPreviewResult> {
+        log.d { "processSuccessResult: START with ${parseResult.transactions.size} transactions" }
         val transactions = parseResult.transactions
 
         // Step 1: Validate
+        log.d { "processSuccessResult: Step 1 - Validating..." }
         _progress.value = ImportProgress.Validating(
             totalTransactions = transactions.size,
             processedCount = 0
         )
         val validationResult = validator.validate(transactions)
+        log.d { "processSuccessResult: Validation complete, warnings=${validationResult.warnings.size}" }
         _progress.value = ImportProgress.Validating(
             totalTransactions = transactions.size,
             processedCount = transactions.size
         )
 
         // Step 2: Deduplicate
+        log.d { "processSuccessResult: Step 2 - Deduplicating..." }
         _progress.value = ImportProgress.Deduplicating(
             totalTransactions = transactions.size,
             processedCount = 0,
@@ -91,6 +107,7 @@ class ImportTransactionsUseCase(
         val existingTransactions = transactionRepository
             .getTransactionsByAccount(targetAccountId)
             .first()
+        log.d { "processSuccessResult: Found ${existingTransactions.size} existing transactions in account" }
 
         val duplicateStatuses = duplicateDetector.checkDuplicates(
             imported = transactions,
@@ -98,6 +115,7 @@ class ImportTransactionsUseCase(
         )
 
         val duplicateCount = duplicateStatuses.values.count { it.isDuplicate }
+        log.d { "processSuccessResult: Found $duplicateCount duplicates" }
         _progress.value = ImportProgress.Deduplicating(
             totalTransactions = transactions.size,
             processedCount = transactions.size,
@@ -105,6 +123,7 @@ class ImportTransactionsUseCase(
         )
 
         // Step 3: Categorize
+        log.d { "processSuccessResult: Step 3 - Categorizing..." }
         _progress.value = ImportProgress.Categorizing(
             totalTransactions = transactions.size,
             categorizedCount = 0,
@@ -112,6 +131,7 @@ class ImportTransactionsUseCase(
         )
 
         val categoryResults = categorizeTransactions(transactions)
+        log.d { "processSuccessResult: Categorized ${categoryResults.size} transactions" }
 
         _progress.value = ImportProgress.Categorizing(
             totalTransactions = transactions.size,
@@ -148,7 +168,9 @@ class ImportTransactionsUseCase(
         )
 
         currentPreview = preview
+        log.i { "processSuccessResult: currentPreview SET with ${reviewableTransactions.size} transactions" }
         _progress.value = ImportProgress.AwaitingConfirmation(preview)
+        log.d { "processSuccessResult: Progress set to AwaitingConfirmation" }
 
         return Result.success(preview)
     }
@@ -166,54 +188,102 @@ class ImportTransactionsUseCase(
         categoryOverrides: Map<Int, String>,
         targetAccountId: String
     ): Result<ImportConfirmationResult> {
-        val preview = currentPreview ?: return Result.failure(
-            ImportException("No import in progress")
-        )
+        log.i { "confirmImport: selectedIndices=${selectedIndices.size}, targetAccountId=$targetAccountId" }
+        log.d { "confirmImport: currentPreview is ${if (currentPreview != null) "SET" else "NULL"}" }
+
+        val preview = currentPreview
+        if (preview == null) {
+            log.e { "confirmImport: FAILED - No import in progress (currentPreview is null)" }
+            return Result.failure(ImportException("No import in progress"))
+        }
+
+        log.d { "confirmImport: preview has ${preview.transactions.size} transactions" }
 
         val selectedTransactions = preview.transactions
             .filter { it.index in selectedIndices }
+
+        log.d { "confirmImport: ${selectedTransactions.size} transactions selected for import" }
 
         _progress.value = ImportProgress.Saving(
             totalTransactions = selectedTransactions.size,
             savedCount = 0
         )
+        log.d { "confirmImport: Progress set to Saving" }
 
         val now = Instant.fromEpochMilliseconds(
             kotlin.time.Clock.System.now().toEpochMilliseconds()
         )
 
-        val transactionsToSave = selectedTransactions.map { reviewable ->
-            val categoryId = categoryOverrides[reviewable.index]
+        // Ensure all categories exist before saving (prevents FOREIGN KEY errors)
+        // IMPORTANT: Must use explicit for loop with suspend calls, not .map {} or buildList {}
+        val transactionsToSave = mutableListOf<Transaction>()
+        for (reviewable in selectedTransactions) {
+            val rawCategoryId = categoryOverrides[reviewable.index]
                 ?: reviewable.transaction.category
             val imported = reviewable.transaction
 
-            Transaction(
-                id = Uuid.random().toString(),
-                accountId = targetAccountId,
-                date = imported.date.atStartOfDayIn(TimeZone.currentSystemDefault()),
-                amount = imported.amount,
-                description = imported.description,
-                type = if (imported.amount >= 0) TransactionType.INCOME else TransactionType.EXPENSE,
-                categoryId = categoryId,
-                merchant = imported.merchant,
-                note = null,
-                createdAt = now,
-                updatedAt = now
+            // Resolve category - creates if missing, falls back to "other" if unknown
+            val resolvedCategoryId = if (rawCategoryId != null) {
+                log.d { "confirmImport: resolving category '$rawCategoryId' for ${imported.description?.take(30)}" }
+                categoryResolver.ensureExists(rawCategoryId)
+            } else {
+                null
+            }
+
+            transactionsToSave.add(
+                Transaction(
+                    id = Uuid.random().toString(),
+                    accountId = targetAccountId,
+                    date = imported.date.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                    amount = imported.amount,
+                    description = imported.description,
+                    type = if (imported.amount >= 0) TransactionType.INCOME else TransactionType.EXPENSE,
+                    categoryId = resolvedCategoryId,
+                    merchant = imported.merchant,
+                    note = null,
+                    createdAt = now,
+                    updatedAt = now
+                )
             )
         }
 
-        transactionsToSave.forEach { transaction ->
-            transactionRepository.createTransaction(transaction)
+        log.d { "confirmImport: Saving ${transactionsToSave.size} transactions to repository..." }
+
+        try {
+            log.i { "confirmImport: Starting batch save of ${transactionsToSave.size} transactions" }
+            transactionsToSave.forEachIndexed { index, transaction ->
+                log.d { "confirmImport: Saving ${index + 1}/${transactionsToSave.size}: ${transaction.description?.take(30)}, categoryId=${transaction.categoryId}" }
+                try {
+                    transactionRepository.createTransaction(transaction)
+                    log.d { "confirmImport: Saved ${index + 1} OK" }
+                } catch (inner: Exception) {
+                    log.e(inner) { "confirmImport: FAILED to save tx ${index + 1}: ${inner::class.simpleName} - ${inner.message}" }
+                    throw inner
+                }
+            }
+            log.i { "confirmImport: All ${transactionsToSave.size} transactions saved successfully" }
+        } catch (e: Exception) {
+            val errorMsg = e.message ?: "Unknown error (${e::class.simpleName})"
+            log.e(e) { "confirmImport: EXCEPTION during save - class=${e::class.simpleName}, message=$errorMsg" }
+            _progress.value = ImportProgress.Failed(
+                message = errorMsg,
+                recoverable = true,
+                partialResult = preview
+            )
+            return Result.failure(ImportException("Failed to save transactions: $errorMsg"))
         }
 
         val skippedCount = preview.transactions.size - selectedTransactions.size
         val duplicateCount = preview.duplicateCount
+
+        log.i { "confirmImport: SUCCESS - saved=${transactionsToSave.size}, skipped=$skippedCount, duplicates=$duplicateCount" }
 
         _progress.value = ImportProgress.Completed(
             savedCount = transactionsToSave.size,
             skippedCount = skippedCount,
             duplicateCount = duplicateCount
         )
+        log.d { "confirmImport: Progress set to Completed" }
 
         return Result.success(
             ImportConfirmationResult(
@@ -227,6 +297,7 @@ class ImportTransactionsUseCase(
      * Cancel the current import.
      */
     fun cancelImport() {
+        log.i { "cancelImport: Cancelling import, clearing currentPreview" }
         currentPreview = null
         _progress.value = ImportProgress.Cancelled
     }
@@ -235,15 +306,16 @@ class ImportTransactionsUseCase(
      * Reset to idle state.
      */
     fun reset() {
+        log.i { "reset: Resetting to Idle, clearing currentPreview" }
         currentPreview = null
         _progress.value = ImportProgress.Idle
     }
 
     /**
-     * Categorize imported transactions using Tier 1 (rule-based, free).
+     * Categorize imported transactions using all tiers (Tier 1 + Tier 2 AI if available).
      * @return Map of transaction index to category ID
      */
-    private fun categorizeTransactions(
+    private suspend fun categorizeTransactions(
         transactions: List<ImportedTransaction>
     ): Map<Int, String> {
         val now = Instant.fromEpochMilliseconds(
@@ -267,9 +339,11 @@ class ImportTransactionsUseCase(
             )
         }
 
-        val result = categorizationUseCase.categorizeTier1(tempTransactions)
+        // Use categorizeAll() to include Tier 2 AI when available
+        val batchResult = categorizationUseCase.categorizeAll(tempTransactions)
+        log.d { "categorizeTransactions: Tier1=${batchResult.localCount}, Tier2=${batchResult.tier2Count}, uncategorized=${batchResult.totalUncategorized}" }
 
-        return result
+        return batchResult.results
             .filter { it.categoryId != null }
             .associate {
                 val index = it.transactionId.removePrefix("import-").toIntOrNull() ?: -1

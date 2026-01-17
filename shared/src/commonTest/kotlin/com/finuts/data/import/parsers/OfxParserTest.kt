@@ -7,6 +7,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import com.finuts.data.import.utils.NumberParser
 import kotlin.test.assertTrue
 
 /**
@@ -14,7 +15,7 @@ import kotlin.test.assertTrue
  */
 class OfxParserTest {
 
-    private val parser = OfxParser()
+    private val parser = OfxParser(NumberParser())
 
     @Test
     fun `parse OFX SGML format`() {

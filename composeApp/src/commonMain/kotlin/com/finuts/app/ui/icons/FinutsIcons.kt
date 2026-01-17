@@ -33,6 +33,7 @@ object FinutsIcons {
     val Search = TablerIcons.Search
     val Filter = TablerIcons.Adjustments
     val Refresh = TablerIcons.Refresh
+    val Import = TablerIcons.FileImport
 
     // Categories (for transactions)
     val Food = TablerIcons.ToolsKitchen2

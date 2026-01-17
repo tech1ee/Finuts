@@ -5,8 +5,12 @@ import com.finuts.data.categorization.MerchantDatabase
 import com.finuts.data.categorization.RuleBasedCategorizer
 import com.finuts.data.import.FuzzyDuplicateDetector
 import com.finuts.data.import.ImportValidator
+import com.finuts.domain.entity.Category
+import com.finuts.domain.entity.CategoryType
 import com.finuts.domain.entity.Transaction
 import com.finuts.domain.entity.TransactionType
+import com.finuts.domain.registry.IconRegistry
+import com.finuts.domain.repository.CategoryRepository
 import com.finuts.domain.entity.import.CategorizationTier
 import com.finuts.domain.entity.import.DocumentType
 import com.finuts.domain.entity.import.DuplicateStatus
@@ -36,6 +40,7 @@ import kotlin.test.assertTrue
 class ImportTransactionsUseCaseTest {
 
     private val fakeTransactionRepository = FakeTransactionRepository()
+    private val fakeCategoryRepository = FakeCategoryRepository()
     private val duplicateDetector = FuzzyDuplicateDetector()
     private val validator = ImportValidator()
 
@@ -47,11 +52,19 @@ class ImportTransactionsUseCaseTest {
         aiCategorizer = null
     )
 
+    // Category management
+    private val iconRegistry = IconRegistry()
+    private val categoryResolver = CategoryResolver(
+        categoryRepository = fakeCategoryRepository,
+        iconRegistry = iconRegistry
+    )
+
     private val useCase = ImportTransactionsUseCase(
         transactionRepository = fakeTransactionRepository,
         duplicateDetector = duplicateDetector,
         validator = validator,
-        categorizationUseCase = categorizationUseCase
+        categorizationUseCase = categorizationUseCase,
+        categoryResolver = categoryResolver
     )
 
     private fun createImportedTransaction(
@@ -529,13 +542,18 @@ class ImportTransactionsUseCaseTest {
 
     private fun createExistingTransaction(
         id: String = "tx-existing",
-        description: String = "Existing"
+        description: String = "Existing",
+        date: LocalDate = LocalDate(2026, 1, 8)
     ): Transaction {
         val now = Instant.fromEpochMilliseconds(kotlin.time.Clock.System.now().toEpochMilliseconds())
+        // Convert LocalDate to Instant at noon UTC for consistency with imported transactions
+        val transactionInstant = Instant.fromEpochMilliseconds(
+            date.toEpochDays() * 24L * 60 * 60 * 1000 + 12 * 60 * 60 * 1000
+        )
         return Transaction(
             id = id,
             accountId = "acc-1",
-            date = now,
+            date = transactionInstant,
             amount = -5000L,
             description = description,
             type = TransactionType.EXPENSE,
@@ -587,6 +605,38 @@ class ImportTransactionsUseCaseTest {
         override suspend fun insertTransfer(outgoing: Transaction, incoming: Transaction) {
             savedTransactions.add(outgoing)
             savedTransactions.add(incoming)
+        }
+    }
+
+    // === Fake Category Repository ===
+
+    private class FakeCategoryRepository : CategoryRepository {
+        private val categories = mutableMapOf<String, Category>()
+
+        override fun getAllCategories(): Flow<List<Category>> = flowOf(categories.values.toList())
+
+        override fun getCategoryById(id: String): Flow<Category?> = flowOf(categories[id])
+
+        override fun getCategoriesByType(type: CategoryType): Flow<List<Category>> =
+            flowOf(categories.values.filter { it.type == type })
+
+        override fun getDefaultCategories(): Flow<List<Category>> =
+            flowOf(categories.values.filter { it.isDefault })
+
+        override suspend fun createCategory(category: Category) {
+            categories[category.id] = category
+        }
+
+        override suspend fun updateCategory(category: Category) {
+            categories[category.id] = category
+        }
+
+        override suspend fun deleteCategory(id: String) {
+            categories.remove(id)
+        }
+
+        override suspend fun seedDefaultCategories() {
+            // No-op in tests - categories are created via CategoryResolver
         }
     }
 }

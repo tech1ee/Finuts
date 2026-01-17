@@ -1,6 +1,6 @@
 package com.finuts.data.repository
 
-import com.finuts.data.categorization.MerchantNormalizer
+import com.finuts.data.categorization.MerchantNormalizerInterface
 import com.finuts.data.local.dao.LearnedMerchantDao
 import com.finuts.data.local.mapper.toDomain
 import com.finuts.data.local.mapper.toEntity
@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class LearnedMerchantRepositoryImpl(
-    private val dao: LearnedMerchantDao
+    private val dao: LearnedMerchantDao,
+    private val merchantNormalizer: MerchantNormalizerInterface
 ) : LearnedMerchantRepository {
 
     override suspend fun save(merchant: LearnedMerchant) {
@@ -28,7 +29,7 @@ class LearnedMerchantRepositoryImpl(
 
     override suspend fun findMatch(description: String): LearnedMerchant? {
         // Normalize description before SQL query for consistent matching
-        val normalizedDescription = MerchantNormalizer.normalize(description)
+        val normalizedDescription = merchantNormalizer.normalize(description)
         if (normalizedDescription.isBlank()) return null
 
         return dao.findMatchingMerchant(normalizedDescription)?.toDomain()

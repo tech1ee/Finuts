@@ -12,6 +12,9 @@ import com.finuts.app.feature.dashboard.DashboardViewModel
 import com.finuts.app.feature.onboarding.OnboardingViewModel
 import com.finuts.app.feature.reports.ReportsViewModel
 import com.finuts.app.feature.settings.SettingsViewModel
+import com.finuts.ai.providers.LLMProvider
+import com.finuts.app.feature.settings.ai.AIFeaturesViewModel
+import com.finuts.app.feature.settings.ai.LLMDebugViewModel
 import com.finuts.app.feature.transactions.AddEditTransactionViewModel
 import com.finuts.app.feature.transactions.QuickAddViewModel
 import com.finuts.app.feature.transactions.TransactionDetailViewModel
@@ -24,13 +27,15 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val viewModelModule = module {
-    // OnboardingViewModel has optional CoroutineScope param - explicitly pass only required deps
-    viewModel { OnboardingViewModel(get(), get()) }
+    // OnboardingViewModel: PreferencesRepository, AccountRepository, ModelRepository
+    viewModel { OnboardingViewModel(get(), get(), get()) }
     viewModelOf(::DashboardViewModel)
     viewModelOf(::AccountsViewModel)
     viewModelOf(::TransactionsViewModel)
     viewModelOf(::QuickAddViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::AIFeaturesViewModel)
+    viewModel { LLMDebugViewModel(get(), getOrNull<LLMProvider>()) }
     viewModelOf(::ReportsViewModel)
     viewModelOf(::AddTransferViewModel)
 

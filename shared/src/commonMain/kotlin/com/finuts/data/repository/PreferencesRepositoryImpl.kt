@@ -31,7 +31,10 @@ class PreferencesRepositoryImpl(
             notificationsEnabled = prefs[KEY_NOTIFICATIONS] ?: true,
             biometricEnabled = prefs[KEY_BIOMETRIC] ?: false,
             onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false,
-            userGoal = prefs[KEY_USER_GOAL]?.let { UserGoal.valueOf(it) } ?: UserGoal.NOT_SET
+            userGoal = prefs[KEY_USER_GOAL]?.let { UserGoal.valueOf(it) } ?: UserGoal.NOT_SET,
+            aiCategorizationEnabled = prefs[KEY_AI_CATEGORIZATION] ?: true,
+            selectedModelId = prefs[KEY_SELECTED_MODEL],
+            aiModelDownloadedInOnboarding = prefs[KEY_AI_MODEL_ONBOARDING] ?: false
         )
     }
 
@@ -63,6 +66,24 @@ class PreferencesRepositoryImpl(
         dataStore.edit { it[KEY_USER_GOAL] = goal.name }
     }
 
+    override suspend fun setAICategorizationEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AI_CATEGORIZATION] = enabled }
+    }
+
+    override suspend fun setSelectedModelId(modelId: String?) {
+        dataStore.edit {
+            if (modelId != null) {
+                it[KEY_SELECTED_MODEL] = modelId
+            } else {
+                it.remove(KEY_SELECTED_MODEL)
+            }
+        }
+    }
+
+    override suspend fun setAIModelDownloadedInOnboarding(downloaded: Boolean) {
+        dataStore.edit { it[KEY_AI_MODEL_ONBOARDING] = downloaded }
+    }
+
     override suspend fun clearAll() {
         dataStore.edit { it.clear() }
     }
@@ -76,5 +97,8 @@ class PreferencesRepositoryImpl(
         private val KEY_BIOMETRIC = booleanPreferencesKey("biometric_enabled")
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         private val KEY_USER_GOAL = stringPreferencesKey("user_goal")
+        private val KEY_AI_CATEGORIZATION = booleanPreferencesKey("ai_categorization_enabled")
+        private val KEY_SELECTED_MODEL = stringPreferencesKey("selected_model_id")
+        private val KEY_AI_MODEL_ONBOARDING = booleanPreferencesKey("ai_model_downloaded_onboarding")
     }
 }

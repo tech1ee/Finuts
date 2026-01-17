@@ -1,5 +1,6 @@
 package com.finuts.data.categorization
 
+import co.touchlab.kermit.Logger
 import com.finuts.domain.entity.CategorizationResult
 import com.finuts.domain.entity.CategorizationSource
 import com.finuts.domain.entity.LearnedMerchant
@@ -21,6 +22,7 @@ class TransactionCategorizer(
     private val learnedMerchantRepository: LearnedMerchantRepository,
     private val ruleBasedCategorizer: RuleBasedCategorizer
 ) {
+    private val log = Logger.withTag("TransactionCategorizer")
     companion object {
         private const val USER_LEARNED_BASE_CONFIDENCE = 0.95f
     }
@@ -37,15 +39,34 @@ class TransactionCategorizer(
         description: String
     ): CategorizationResult? {
         val trimmed = description.trim()
-        if (trimmed.isBlank()) return null
+        log.d { "categorize: txId=$transactionId, desc='${trimmed.take(50)}'" }
+
+        if (trimmed.isBlank()) {
+            log.d { "categorize: SKIP - empty description" }
+            return null
+        }
 
         // Tier 0: Check user learned mappings first (highest priority)
-        checkUserLearnedMapping(transactionId, trimmed)?.let {
-            return it
+        checkUserLearnedMapping(transactionId, trimmed)?.let { result ->
+            log.i {
+                "categorize: TIER_0_MATCH txId=$transactionId, " +
+                    "category=${result.categoryId}, conf=${result.confidence}"
+            }
+            return result
         }
 
         // Tier 1: Fall back to rule-based categorizer
-        return ruleBasedCategorizer.categorize(transactionId, trimmed)
+        val tier1Result = ruleBasedCategorizer.categorize(transactionId, trimmed)
+        if (tier1Result != null) {
+            log.i {
+                "categorize: TIER_1_MATCH txId=$transactionId, " +
+                    "category=${tier1Result.categoryId}, " +
+                    "source=${tier1Result.source}, conf=${tier1Result.confidence}"
+            }
+        } else {
+            log.d { "categorize: NO_MATCH txId=$transactionId → fallthrough to LLM" }
+        }
+        return tier1Result
     }
 
     /**
@@ -56,8 +77,18 @@ class TransactionCategorizer(
         transactionId: String,
         description: String
     ): CategorizationResult? {
+        log.d { "checkUserLearnedMapping: searching for '$description'" }
+
         val learned = learnedMerchantRepository.findMatch(description)
-            ?: return null
+        if (learned == null) {
+            log.d { "checkUserLearnedMapping: no learned mapping found" }
+            return null
+        }
+
+        log.d {
+            "checkUserLearnedMapping: FOUND merchant=${learned.merchantPattern}, " +
+                "category=${learned.categoryId}, samples=${learned.sampleCount}"
+        }
 
         // Update last used timestamp (fire and forget for perf)
         updateLastUsed(learned)
@@ -77,8 +108,9 @@ class TransactionCategorizer(
             )
             val updated = learned.copy(lastUsedAt = now)
             learnedMerchantRepository.update(updated)
-        } catch (_: Exception) {
-            // Ignore update failures - not critical
+            log.d { "updateLastUsed: updated ${learned.merchantPattern}" }
+        } catch (e: Exception) {
+            log.w { "updateLastUsed: failed for ${learned.merchantPattern} - ${e.message}" }
         }
     }
 

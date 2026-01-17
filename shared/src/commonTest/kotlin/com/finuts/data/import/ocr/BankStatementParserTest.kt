@@ -1,5 +1,7 @@
 package com.finuts.data.import.ocr
 
+import com.finuts.data.import.utils.DateParser
+import com.finuts.data.import.utils.NumberParser
 import com.finuts.domain.entity.import.ImportSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,7 +10,7 @@ import kotlin.test.assertTrue
 
 class BankStatementParserTest {
 
-    private val parser = BankStatementParser()
+    private val parser = BankStatementParser(DateParser(), NumberParser())
 
     // === Basic Parsing ===
 
@@ -218,5 +220,48 @@ class BankStatementParserTest {
         assertEquals(1, transactions.size)
         assertTrue(transactions[0].description.contains("Kaspi") ||
             transactions[0].description.contains("Перевод"))
+    }
+
+    // === Kaspi Bank PDF Format (real) ===
+
+    @Test
+    fun `parses Kaspi PDF format - expense`() {
+        // Real Kaspi format: Date [+-] Amount ₸ Operation Details
+        val text = "07.01.26 - 3 700,00 ₸ Перевод Shukhrat S."
+        val transactions = parser.parseText(text, "kaspi")
+
+        assertEquals(1, transactions.size)
+        assertEquals(-370000L, transactions[0].amount)
+        assertTrue(transactions[0].description.contains("Перевод") ||
+            transactions[0].description.contains("Shukhrat"))
+    }
+
+    @Test
+    fun `parses Kaspi PDF format - income`() {
+        val text = "07.01.26 + 150 000,00 ₸ Пополнение С Kaspi Депозита"
+        val transactions = parser.parseText(text, "kaspi")
+
+        assertEquals(1, transactions.size)
+        assertEquals(15000000L, transactions[0].amount)
+        assertTrue(transactions[0].description.contains("Пополнение") ||
+            transactions[0].description.contains("Депозита"))
+    }
+
+    @Test
+    fun `parses full Kaspi PDF statement`() {
+        val text = """
+            07.01.26 - 3 700,00 ₸ Перевод Shukhrat S.
+            07.01.26 - 500,00 ₸ Покупка Banzai Fitness Atakent
+            07.01.26 - 145 000,00 ₸ Покупка Banzai Fitness Atakent
+            07.01.26 + 150 000,00 ₸ Пополнение С Kaspi Депозита
+        """.trimIndent()
+
+        val transactions = parser.parseText(text, "kaspi")
+
+        assertEquals(4, transactions.size)
+        assertEquals(-370000L, transactions[0].amount)      // -3700
+        assertEquals(-50000L, transactions[1].amount)       // -500
+        assertEquals(-14500000L, transactions[2].amount)    // -145000
+        assertEquals(15000000L, transactions[3].amount)     // +150000
     }
 }

@@ -54,6 +54,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun TransactionsScreen(
     onTransactionClick: (String) -> Unit,
     onAddTransactionClick: () -> Unit,
+    onNavigateToImport: () -> Unit,
     onGoToAccounts: () -> Unit = {},
     viewModel: TransactionsViewModel = koinViewModel()
 ) {
@@ -109,7 +110,8 @@ fun TransactionsScreen(
                             periodLabel = state.periodLabel,
                             onFilterChange = viewModel::onFilterChange,
                             onTransactionClick = { viewModel.onTransactionClick(it) },
-                            onAddTransaction = { viewModel.onAddTransactionClick() }
+                            onAddTransaction = { viewModel.onAddTransactionClick() },
+                            onImportClick = onNavigateToImport
                         )
                     }
                 }
@@ -127,7 +129,8 @@ private fun TransactionsContent(
     periodLabel: String,
     onFilterChange: (TransactionFilter) -> Unit,
     onTransactionClick: (String) -> Unit,
-    onAddTransaction: () -> Unit
+    onAddTransaction: () -> Unit,
+    onImportClick: () -> Unit
 ) {
     val summary = remember(monthlyIncome, monthlyExpense, periodLabel) {
         TransactionSummary(income = monthlyIncome, expense = monthlyExpense, periodLabel = periodLabel)
@@ -137,6 +140,7 @@ private fun TransactionsContent(
         FinutsTopBar(
             title = stringResource(Res.string.history),
             actions = {
+                TopBarAction(FinutsIcons.Import, "Import", onImportClick)
                 TopBarAction(FinutsIcons.Search, stringResource(Res.string.search)) {}
                 TopBarAction(FinutsIcons.Filter, stringResource(Res.string.filter)) {}
             }

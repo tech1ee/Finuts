@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,6 +36,9 @@ import com.finuts.app.ui.components.settings.SettingsToggleRow
 import com.finuts.domain.model.AppLanguage
 import com.finuts.domain.model.AppTheme
 import finuts.composeapp.generated.resources.Res
+import finuts.composeapp.generated.resources.ai_features
+import finuts.composeapp.generated.resources.ai_model
+import finuts.composeapp.generated.resources.ai_model_not_installed
 import finuts.composeapp.generated.resources.appearance
 import finuts.composeapp.generated.resources.biometric_lock
 import finuts.composeapp.generated.resources.categories
@@ -59,6 +63,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun SettingsScreen(
     onNavigateToCategories: () -> Unit = {},
+    onNavigateToAIFeatures: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val prefs by viewModel.preferences.collectAsState()
@@ -120,6 +125,22 @@ fun SettingsScreen(
                     title = stringResource(Res.string.categories),
                     value = stringResource(Res.string.manage_categories),
                     onClick = onNavigateToCategories
+                )
+            }
+
+            Spacer(Modifier.height(FinutsSpacing.settingsGroupGap))
+
+            // AI Features
+            SettingsGroup(
+                title = stringResource(Res.string.ai_features),
+                icon = Icons.Default.Star,
+                modifier = Modifier.padding(horizontal = FinutsSpacing.screenPadding)
+            ) {
+                SettingsRow(
+                    title = stringResource(Res.string.ai_model),
+                    value = prefs.selectedModelId
+                        ?: stringResource(Res.string.ai_model_not_installed),
+                    onClick = onNavigateToAIFeatures
                 )
             }
 
