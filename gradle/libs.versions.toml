@@ -29,7 +29,7 @@ kermit = "2.0.4"
 
 # AI SDKs
 openai-kotlin = "4.0.1"
-anthropic-kotlin = "0.25.2"
+anthropic-kotlin = "0.28.0"
 
 # Testing
 junit = "4.13.2"
