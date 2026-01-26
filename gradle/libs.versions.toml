@@ -16,7 +16,7 @@ serialization = "1.9.0"
 datetime = "0.7.1"
 
 # Networking
-ktor = "3.3.3"
+ktor = "3.4.0"
 
 # DI
 koin = "4.1.0"
